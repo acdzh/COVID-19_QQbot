@@ -34,5 +34,5 @@ golang + gcc
 
 ## 其他
 
-感谢: [酷Q](https://cqp.cc/), [@Tnze](https://github.com/Tnze/CoolQ-Golang-SDK)
+感谢: [丁香园疫情通报平台](https://3g.dxy.cn/newh5/view/pneumonia), [酷Q](https://cqp.cc/), [@Tnze](https://github.com/Tnze/CoolQ-Golang-SDK), 以及所有奋战在"战疫"一线的工作者和所有为抗击疫情做过贡献的人们
 
