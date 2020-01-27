@@ -1,0 +1,146 @@
+{
+    // 懒得改这个文件
+    "ret": 1, // 返回码，固定为1
+    "apiver": 9, // Api版本，本SDK为9
+    "name": "2019-nCov", // 应用名称
+    "version": "1.0.0", // 应用版本
+    "version_id": 1, // 应用顺序版本（每次发布时至少+1）
+    "author": "acdzh", // 应用作者
+    "description": "疫情提醒",
+    "event": [ // 事件列表，同一事件类型可重复定义（发布前请删除无用事件）
+        {
+            "id": 1003,
+            "type": 1003,
+            "name": "插件启用",
+            "priority": 20000,
+            "function": "EVENT_ON_ENABLE"
+        },
+        {
+            "id": 1004,
+            "type": 1004,
+            "name": "插件停用",
+            "priority": 20000,
+            "function": "EVENT_ON_DISABLE"
+        },
+        {
+            "id": 1001,
+            "type": 1001,
+            "name": "酷Q启动",
+            "priority": 20000,
+            "function": "EVENT_ON_START"
+        },
+        {
+            "id": 1002,
+            "type": 1002,
+            "name": "酷Q退出",
+            "priority": 20000,
+            "function": "EVENT_ON_EXIT"
+        },
+        {
+            "id": 1,
+            "type": 21,
+            "name": "私聊消息",
+            "function": "EVENT_ON_PRIVATE_MSG",
+            "priority": 20000
+        },
+        {
+            "id": 2,
+            "type": 2,
+            "name": "群消息",
+            "function": "EVENT_ON_GROUP_MSG",
+            "priority": 20000
+        },
+        {
+            "id": 3,
+            "type": 4,
+            "name": "讨论组消息",
+            "function": "EVENT_ON_DISCUSS_MSG",
+            "priority": 20000
+        },
+        {
+            "id": 4,
+            "type": 11,
+            "name": "群文件上传",
+            "function": "EVENT_ON_GROUP_UPLOAD",
+            "priority": 20000
+        },
+        {
+            "id": 5,
+            "type": 101,
+            "name": "群管理员变动",
+            "function": "EVENT_ON_GROUP_ADMIN",
+            "priority": 20000
+        },
+        {
+            "id": 6,
+            "type": 102,
+            "name": "群成员减少",
+            "function": "EVENT_ON_GROUP_MEMBER_DECREASE",
+            "priority": 20000
+        },
+        {
+            "id": 7,
+            "type": 103,
+            "name": "群成员增加",
+            "function": "EVENT_ON_GROUP_MEMBER_INCREASE",
+            "priority": 20000
+        },
+        {
+            "id": 10,
+            "type": 201,
+            "name": "好友添加",
+            "function": "EVENT_ON_FRIEND_ADD",
+            "priority": 20000
+        },
+        {
+            "id": 8,
+            "type": 301,
+            "name": "加好友请求",
+            "function": "EVENT_ON_FRIEND_REQUEST",
+            "priority": 20000
+        },
+        {
+            "id": 9,
+            "type": 302,
+            "name": "加群请求／邀请",
+            "function": "EVENT_ON_GROUP_REQUEST",
+            "priority": 20000
+        }
+    ],
+    "menu": [
+        // 由于Go编写GUI有困难，此处暂时空着
+        // 如有强烈的需求要用到菜单，可以自行
+        // 导出函数并写在此处，用户点击按钮时即会被调用。
+        // {
+        //     "name": "菜单一", //菜单名称
+        //     "function": "YOUR_HANDLE_FUNCTION" //菜单对应函数
+        // }
+    ],
+    "status": [ // 悬浮窗状态
+    ],
+    "auth": [
+        // 20, // getCookies / getCsrfToken
+        // 30, // getRecord
+        101, // sendGroupMsg
+        103, // sendDiscussMsg
+        106, // sendPrivateMsg
+        // 110, // sendLikeV2 / sendLike
+        // 120, // setGroupKick
+        // 121, // setGroupBan
+        // 122, // setGroupAdmin
+        // 123, // setGroupWholeBan
+        // 124, // setGroupAnonymousBan
+        // 125, // setGroupAnonymous
+        // 126, // setGroupCard
+        // 127, // setGroupLeave
+        // 128, // setGroupSpecialTitle
+        130, // getGroupMemberInfoV2 / getGroupMemberInfo
+        131, // getStrangerInfo
+        // 140, // setDiscussLeave
+        // 150, // setFriendAddRequest
+        // 151, // setGroupAddRequest
+        160, // getGroupMemberList
+        161, // getGroupList
+        180 // deleteMsg
+    ]
+}
