@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,23 +23,38 @@ const appid string = "com.acdzh.dxy"
 //调试模式
 const isDevMode bool = false
 
+var willPraseSuccess bool = true
+
 // 主动刷新间隔
 const refershInterval = 5 // 分钟
 
 // 自定义查询子区域 (未对所有地市进行匹配, 如果失败请自行修改正则
-const provinceName string = "山东"
+const provinceName string = "山东省"
+const provinceShortName string = "山东"
 const cityName string = "菏泽"
 
 // bot版本信息
-const currentVersion string = "v1.27.20.15 beta"                                                                            // 当前版本, 每次修改后会进行版本更新推送
-const versionUpgradeLog string = "1. 大幅优化代码结构, 提取复用组件\n2. 开源, 并增强了自定制功能\n3. 优化不同订阅权限管理, 优化消息发送逻辑\n4. TODO: 私聊消息订阅, 个性化城市订阅" // 版本更新日志, 仅会推送一次
-const versionFileName string = "conf/dxy.cfg"                                                                               // 存储版本号
-const logFilePath string = "data/log/"                                                                                      // log文件目录 (log会以日期命名
-const shouldPushLog bool = true                                                                                             // 是否在每次更新之后更新版本推送
+const currentVersion string = "v1.28.9.56" // 当前版本, 每次修改后会进行版本更新推送
+// 版本更新日志, 仅会推送一次
+const versionUpgradeLog string = `1. 修复拼写错误`
+const versionFileName string = "conf/dxy.cfg" // 存储版本号
+const logFilePath string = "data/log/"        // log文件目录 (log会以日期命名
+const shouldPushLog bool = true               // 是否在每次更新之后更新版本推送
 
 // url
-const dxyURL string = "https://3g.dxy.cn/newh5/view/pneumonia" // 数据来源url
-const devURL string = "http://127.0.0.1:5500/index.html"       // 本地调试url
+const dxyURL string = "https://3g.dxy.cn/newh5/view/pneumonia"                  // 数据来源url
+const baiduURL string = "https://voice.baidu.com/act/newpneumonia/newpneumonia" // 地图来源uurl
+const tencentURL string = "https://news.qq.com/zt2020/page/feiyan.htm"
+const devURL string = "http://127.0.0.1:5500/index.html" // 本地调试url
+const urlList string = `其他监测网址:
+凤凰网: https://news.ifeng.com/c/special/7tPlDSzDgVk
+新浪: https://news.sina.cn/zt_d/yiqing0121
+百度: https://voice.baidu.com/act/newpneumonia/newpneumonia
+搜狗: https://123.sogou.com/zhuanti/pneumonia.html
+知乎: https://www.zhihu.com/special/19681091
+网易: https://news.163.com/special/epidemic/
+头条: https://i.snssdk.com/feoffline/hot_list/template/hot_list/forum.html?forum_id=1656388947394568
+夸克: https://broccoli.uc.cn/apps/pneumonia/routes/index`
 
 // qqGroup & qqID
 var selfQQID string = "1472745738"                    // bot自己的qq号
@@ -54,8 +70,10 @@ const sendTOUserOnly int = 2   // 仅发送给普通用户或群组
 const sendToDevOnly int = 3    // 仅发送给管理员用户或群组
 
 // 具体的消息发送策略 (格式为: 10 * 群消息策略 + 私聊消息策略
+const onlySendToPrivateDevStrategy int = 10*sendToNobody + sendToDevOnly
 const onlineMsgSendStrategy int = 10*sendToNobody + sendToDevOnly      // 上线提醒: 仅私聊发给管理员账号
 const firstDataSendStrategy int = 10*sendToDevOnly + sendToNobody      // 上线后拉取的初始数据: 仅发送到调试qq群
+const failedDataSendStrategy int = 10*sendToUserAndDev + sendToDevOnly // 出现错误: 仅私聊发送管理员, 并发送给所有群
 const versionSendStrategy int = 10*sendToUserAndDev + sendToDevOnly    // 版本日志: 发送给所有群, 但私聊仅发送给管理员
 const upgradeSendStrategy int = 10*sendToUserAndDev + sendToUserAndDev // 数据更新: 发送给所有群和用户
 
@@ -87,88 +105,163 @@ func sendMsg(msg string, strategy int) {
 	}
 }
 
-type dxyDatas struct {
-	ddlTime           string
-	confirmedNumber   string
-	suspectedNumber   string
-	deadNumber        string
-	cureNumber        string
-	provinceNumber    string
-	cityNumber        string
-	susceptiblePeople string
-	incubation        string
-	spreadWay         string
-	isChanged         string
-	diffusion         string
+func timeStampToString(t string) string {
+	if t == "" {
+		return "NaN"
+	}
+	i, _ := strconv.ParseInt(t, 10, 64)
+	return time.Unix(i/1000, 0).Format("2006-01-02 15:04:05 (北京时间)")
 }
+
+var arrHead = map[string]string{
+	"createTime":     "创建时间: ",            // 1579537899000
+	"modifyTime":     "更新时间: ",            // 1580141884000
+	"infectSource":   "传染源: ",             // "野生动物，可能为中华菊头蝠"
+	"passWay":        "传播途径: ",            // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
+	"imgUrl":         "\n疫情地图: ",          // "https://img1.dxycdn.com/2020/0123/733/3392575782185696736-73.jpg"
+	"dailyPic":       "疫情趋势图: ",           // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
+	"summary":        "汇总: ",              // ""
+	"deleted":        "",                  // false
+	"countRemark":    "",                  // ""
+	"confirmedCount": "确诊: ",              // 2858
+	"suspectedCount": "疑似: ",              // 5794
+	"curedCount":     "治愈: ",              // 56
+	"deadCount":      "死亡: ",              // 82
+	"virus":          "病毒: ",              // "新型冠状病毒 2019-nCoV"
+	"remark1":        "",                  // "易感人群: 暂时不明，病毒存在变异可能"
+	"remark2":        "",                  // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
+	"remark3":        "",                  // ""
+	"remark4":        "",                  // ""
+	"remark5":        "",                  //
+	"generalRemark":  "备注: ",              // "疑似病例数来自国家卫健委数据，目前为全国数据，未分省市自治区等"
+	"abroadRemark":   "",                  // ""
+	"provinceNumber": provinceName + ": ", // 1 / 2 / 3 / 4
+	"cityNumber":     cityName + "市: ",    // 1 / 2 / 3 / 4
+	"version":        "\nbot当前版本: ",
+	"dxyUrl":         "\n丁香园: ",
+	"tencentUrl":     "腾讯: ",
+}
+
+var allAttributes = [...]string{
+	"createTime",     // 1579537899000
+	"modifyTime",     // 1580141884000
+	"infectSource",   // "野生动物，可能为中华菊头蝠"
+	"passWay",        // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
+	"imgUrl",         // "https://img1.dxycdn.com/2020/0123/733/3392575782185696736-73.jpg"
+	"dailyPic",       // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
+	"summary",        // ""
+	"deleted",        // false
+	"countRemark",    // ""
+	"confirmedCount", // 2858
+	"suspectedCount", // 5794
+	"curedCount",     // 56
+	"deadCount",      // 82
+	"virus",          // "新型冠状病毒 2019-nCoV"
+	"remark1",        // "易感人群: 暂时不明，病毒存在变异可能"
+	"remark2",        // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
+	"remark3",        // ""
+	"remark4",        // ""
+	"remark5",        //
+	"generalRemark",  // "疑似病例数来自国家卫健委数据，目前为全国数据，未分省市自治区等"
+	"abroadRemark",   // ""
+}
+
+var otherAttributes = [...]string{
+	"provinceNumber",
+	"cityNumber",
+}
+
+var neededAttributes = [...]string{
+	"modifyTime",     // 1580141884000
+	"confirmedCount", // 2858
+	"suspectedCount", // 5794
+	"deadCount",      // 82
+	"curedCount",     // 56
+	"provinceNumber",
+	"cityNumber",
+	"infectSource", // "野生动物，可能为中华菊头蝠"
+	"virus",        // "新型冠状病毒 2019-nCoV"
+	"passWay",      // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
+	"remark1",      // "易感人群: 暂时不明，病毒存在变异可能"
+	"remark2",      // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
+	"remark3",      // ""
+	"remark4",      // ""
+	"remark5",      // ""
+	"imgUrl",       // "https://img1.dxycdn.com/2020/0123/733/3392575782185696736-73.jpg"
+	"dailyPic",     // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
+	"dxyUrl",
+	"tencentUrl",
+	"version",
+}
+
+var forCheckAttributes = [...]string{
+	"confirmedCount", // 2858
+	"suspectedCount", // 5794
+	"deadCount",      // 82
+	"curedCount",     // 56
+	"provinceNumber",
+	"cityNumber",
+	"infectSource", // "野生动物，可能为中华菊头蝠"
+	"virus",        // "新型冠状病毒 2019-nCoV"
+	"passWay",      // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
+	"remark1",      // "易感人群: 暂时不明，病毒存在变异可能"
+	"remark2",      // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
+	"remark3",      // ""
+	"remark4",      // ""
+	"remark5",      // ""
+	"imgUrl",       // "https://img1.dxycdn.com/2020/0123/733/3392575782185696736-73.jpg"
+	"dailyPic",     // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
+}
+
+type dxyDatas map[string]string
 
 func (d dxyDatas) toString() string {
-	return fmt.Sprintf(
-		"更新时间: %s\n确诊: %s\n疑似: %s\n死亡: %s\n治愈: %s\n%s省: %s\n%s市: %s\n传染源: %s\n病毒: %s\n传播途径: %s\n易感人群: %s\n潜伏期: %s\n数据来源: 丁香园\nbot当前版本: %s",
-		d.ddlTime,
-		d.confirmedNumber,
-		d.suspectedNumber,
-		d.deadNumber,
-		d.cureNumber,
-		provinceName,
-		d.provinceNumber,
-		cityName,
-		d.cityNumber,
-		d.susceptiblePeople,
-		d.incubation,
-		d.spreadWay,
-		d.isChanged,
-		d.diffusion,
-		currentVersion)
+	s := ""
+	for _, arr := range neededAttributes {
+		lineHead := arrHead[arr]
+		lineBody := d[arr]
+		if lineHead != "" || lineBody != "" {
+			s += (lineHead + lineBody + "\n")
+		}
+	}
+	return strings.TrimRight(s, "\n")
 }
 
-func (d dxyDatas) toStringWithOutTime() string {
-	return fmt.Sprintf("%s%s%s%s%s%s%s%s%s%s%s", d.confirmedNumber, d.suspectedNumber, d.deadNumber, d.cureNumber, d.provinceNumber, d.cityNumber, d.susceptiblePeople, d.incubation, d.spreadWay, d.isChanged, d.diffusion)
-}
-
-func (d dxyDatas) toStringAfterUpgrade(new dxyDatas) string {
+func (d dxyDatas) toStringBeforeUpgrade(new dxyDatas) string {
 	upgradeFormat := func(a, b string) string {
 		if a == b {
 			return a
 		}
 		return fmt.Sprintf("%s -> %s (已更新)", a, b)
 	}
-	return fmt.Sprintf(
-		"传染数据已更新!\n更新时间: %s\n确诊: %s\n疑似: %s\n死亡: %s\n治愈: %s\n%s省: %s\n%s市: %s\n传染源: %s\n病毒: %s\n传播途径: %s\n易感人群: %s\n潜伏期: %s\n数据来源: 丁香园\nbot当前版本: %s",
-		upgradeFormat(d.ddlTime, new.ddlTime),
-		upgradeFormat(d.confirmedNumber, new.confirmedNumber),
-		upgradeFormat(d.suspectedNumber, new.suspectedNumber),
-		upgradeFormat(d.deadNumber, new.deadNumber),
-		upgradeFormat(d.cureNumber, new.cureNumber),
-		provinceName,
-		upgradeFormat(d.provinceNumber, new.provinceNumber),
-		cityName,
-		upgradeFormat(d.cityNumber, new.cityNumber),
-		upgradeFormat(d.susceptiblePeople, new.susceptiblePeople),
-		upgradeFormat(d.incubation, new.incubation),
-		upgradeFormat(d.spreadWay, new.spreadWay),
-		upgradeFormat(d.isChanged, new.isChanged),
-		upgradeFormat(d.diffusion, new.diffusion),
-		currentVersion)
+
+	s := ""
+	for _, arr := range neededAttributes {
+		lineHead := arrHead[arr]
+		lineBody := upgradeFormat(d[arr], new[arr])
+		if lineHead != "" || lineBody != "" {
+			s += (lineHead + lineBody + "\n")
+		}
+	}
+	return strings.TrimRight(s, "\n")
 }
 
-func (d *dxyDatas) shouldUpgrade(new *dxyDatas) bool {
-	return !(d.toStringWithOutTime() == new.toStringWithOutTime())
+func (d dxyDatas) shouldUpgrade(new dxyDatas) bool {
+	for _, arr := range forCheckAttributes {
+		if d[arr] != new[arr] {
+			return true
+		}
+	}
+	return false
 }
 
-func (d *dxyDatas) upgrade(new *dxyDatas) {
-	d.ddlTime = new.ddlTime
-	d.confirmedNumber = new.confirmedNumber
-	d.suspectedNumber = new.suspectedNumber
-	d.deadNumber = new.deadNumber
-	d.cureNumber = new.cureNumber
-	d.susceptiblePeople = new.susceptiblePeople
-	d.incubation = new.incubation
-	d.spreadWay = new.spreadWay
-	d.isChanged = new.isChanged
-	d.diffusion = new.diffusion
-	d.provinceNumber = new.provinceNumber
-	d.cityNumber = new.cityNumber
+func (d dxyDatas) upgrade(new dxyDatas) {
+	for _, arr := range allAttributes {
+		d[arr] = new[arr]
+	}
+	for _, arr := range otherAttributes {
+		d[arr] = new[arr]
+	}
 }
 
 func isFileExisted(filename string) bool {
@@ -207,19 +300,17 @@ func checkVer() {
 	if currentVersion != oldVersion {
 		msgR := fmt.Sprintf("bot已更新: %s -> %s\n\n更新日志: %s", oldVersion, currentVersion, versionUpgradeLog)
 		sendMsg(msgR, versionSendStrategy)
-		f, _ := os.OpenFile(versionFileName, os.O_WRONLY, 0666)
+		f, _ := os.OpenFile(versionFileName, os.O_WRONLY|os.O_TRUNC, 0666)
 		io.WriteString(f, currentVersion)
 		f.Close()
 	}
 }
 
 func fetch() string {
-	var url string
-	if isDevMode {
-		url = devURL
-	} else {
-		url = dxyURL
+	if !willPraseSuccess {
+		return ""
 	}
+	url := dxyURL
 
 	req, _ := http.NewRequest("GET", url, strings.NewReader(""))
 	myHeaders := map[string]string{
@@ -239,32 +330,119 @@ func fetch() string {
 	return html
 }
 
-func prase(html string) dxyDatas {
-	peoplesT := regexp.MustCompile("style=\"color: #4169e2\">([0-9]+)</span>").FindAllStringSubmatch(html, 4)
-	infoT := regexp.MustCompile("<i class=\"red___3VJ3X\"></i>([\\s\\S]*?)</p>").FindAllStringSubmatch(html, 2)
-	info2T := regexp.MustCompile("<i class=\"orange___1FP2_\"></i>([\\S\\s]*?)</p>").FindAllStringSubmatch(html, 10)
-	provinceNumberT := regexp.MustCompile("provinceName\":\"" + provinceName + "省\",\"provinceShortName\":\"" + provinceName + "\",\"cityName\":\"\",\"confirmedCount\":([0-9]+),\"suspectedCount\":([0-9]+),\"curedCount\":([0-9]+),\"deadCount\":([0-9]+),").FindStringSubmatch(html)
-	cityNumberT := regexp.MustCompile("\"cityName\":\"" + cityName + "\",\"confirmedCount\":([0-9]+),\"suspectedCount\":([0-9]+),\"curedCount\":([0-9]+),\"deadCount\":([0-9]+)").FindStringSubmatch(html)
-	d := dxyDatas{
-		ddlTime:           strings.Replace(regexp.MustCompile("<p class=\"mapTitle___2QtRg\"><span>([\\S\\s]*?)</span></p>").FindStringSubmatch(html)[1], "\n", "", -1),
-		confirmedNumber:   peoplesT[0][1],
-		suspectedNumber:   peoplesT[1][1],
-		deadNumber:        peoplesT[2][1],
-		cureNumber:        peoplesT[3][1],
-		susceptiblePeople: strings.Replace(strings.Replace(infoT[0][1], "\n", "", -1), " ", "", -1)[10:],
-		incubation:        strings.Replace(infoT[1][1], "\n", "", -1)[8:],
-		spreadWay:         strings.Replace(info2T[0][1], "\n", "", -1)[14:],
-		isChanged:         strings.Replace(info2T[1][1], "\n", "", -1)[13:],
-		diffusion:         strings.Replace(info2T[2][1], "\n", "", -1)[10:],
-		provinceNumber:    fmt.Sprintf("%s / %s / %s / %s", provinceNumberT[1], provinceNumberT[2], provinceNumberT[3], provinceNumberT[4]),
-		cityNumber:        fmt.Sprintf("%s / %s / %s / %s", cityNumberT[1], cityNumberT[2], cityNumberT[3], cityNumberT[4]),
+func fetchMap() string {
+	if !willPraseSuccess {
+		return ""
 	}
+	url := baiduURL
+
+	req, _ := http.NewRequest("GET", url, strings.NewReader(""))
+	myHeaders := map[string]string{
+		"Accept":     "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+		"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/72.0"}
+	for k, v := range myHeaders {
+		req.Header.Set(k, v)
+	}
+
+	client := &http.Client{}
+	res, _ := client.Do(req)
+
+	buf := bytes.NewBuffer([]byte{})
+	buf.ReadFrom(res.Body)
+	html := string(buf.Bytes())
+
+	result := regexp.MustCompile(`"mapSrc":"https:\\/\\/mms-res.cdn.bcebos.com\\/mms-res\\/voicefe\\/captain\\/images\\/(.*?).png`).FindString(html)
+	if len(result) == 0 {
+		return dxyURL
+	}
+	return strings.Replace(result[10:], "\\", "", -1)
+}
+
+func prase(html string) dxyDatas {
+	sprintf := fmt.Sprintf
+	praseSucccess := true
+	errorMsg := "网页已改版, 解析失败. 管理员快来修bug."
+	d := make(dxyDatas)
+
+	contryInformationResults := regexp.MustCompile(`{"id":([0-9]+),"createTime":([0-9]+),"modifyTime":([0-9]+),"infectSource":"(.*?)","passWay":"(.*?)","imgUrl":"(.*?)","dailyPic":"(.*?)","summary":"(.*?)","deleted":([\S]+),"countRemark":"(.*?)","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),"virus":"(.*?)","remark1":"(.*?)","remark2":"(.*?)","remark3":"(.*?)","remark4":"(.*?)","remark5":"(.*?)","generalRemark":"(.*?)","abroadRemark":"(.*?)"}`).FindStringSubmatch(html)
+
+	if len(contryInformationResults) == 0 {
+		praseSucccess = false
+		errorMsg += "\nlen(contryInformationResults) == 0 !"
+		for _, arr := range allAttributes {
+			d[arr] = ""
+		}
+	} else {
+		for index, arr := range allAttributes {
+			d[arr] = contryInformationResults[index+2]
+		}
+	}
+	d["createTime"] = timeStampToString(d["createTime"])
+	d["modifyTime"] = timeStampToString(d["modifyTime"])
+	d["dxyUrl"] = dxyURL
+	d["tencentUrl"] = tencentURL
+	d["imgUrl"] = fetchMap()
+	d["version"] = currentVersion
+
+	provinceInformationResults := regexp.MustCompile(
+		sprintf(`"provinceShortName":"%s","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),`, provinceShortName)).FindStringSubmatch(html)
+
+	if len(provinceInformationResults) == 0 {
+		errorMsg += "\nlen(provinceInformationResults) == 0 !"
+		praseSucccess = false
+		d["provinceNumber"] = `%s / %s / %s / %s`
+	} else {
+		d["provinceNumber"] = sprintf("%s / %s / %s / %s",
+			provinceInformationResults[1],
+			provinceInformationResults[2],
+			provinceInformationResults[4],
+			provinceInformationResults[3])
+	}
+
+	cityInformationResults := regexp.MustCompile(
+		sprintf(`{"cityName":"%s","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+)}`, cityName)).FindStringSubmatch(html)
+
+	if len(cityInformationResults) == 0 {
+		errorMsg += "\nlen(cityInformationResults) == 0"
+		praseSucccess = false
+		d["cityNumber"] = `%s / %s / %s / %s`
+	} else {
+		d["cityNumber"] = sprintf("%s / %s / %s / %s",
+			cityInformationResults[1],
+			cityInformationResults[2],
+			cityInformationResults[4],
+			cityInformationResults[3])
+	}
+
+	if praseSucccess == false {
+		if willPraseSuccess {
+			if isDevMode {
+				fmt.Println(errorMsg)
+			} else {
+				sendMsg(errorMsg, failedDataSendStrategy)
+
+			}
+		}
+		willPraseSuccess = false
+	}
+
 	return d
 }
 
 func main() {
 	if isDevMode {
-		fmt.Println(prase(fetch()).toString())
+		html := fetch()
+		d := prase(html)
+		dd := prase(html)
+		dd["deadCount"] = "9843"
+		fmt.Println(d)
+		fmt.Println()
+		fmt.Println(d.toString())
+		fmt.Println()
+		fmt.Println(d.toStringBeforeUpgrade(dd))
+		d.upgrade(dd)
+		fmt.Println()
+		fmt.Println(d.toString())
 	} else {
 		cqp.Main()
 	}
@@ -283,24 +461,30 @@ func onEnable() int32 {
 	writeLog(fmt.Sprintf("%s", cqp.AppID))
 	checkVer()
 	d := prase(fetch())
-	go func(d *dxyDatas) {
+	go func(d dxyDatas) {
 		for {
-			current := prase(fetch())
-			if d.shouldUpgrade(&current) {
-				msgR := d.toStringAfterUpgrade(current)
-				writeLog("Upgrade")
-				sendMsg(msgR, upgradeSendStrategy)
-				d.upgrade(&current)
+			if willPraseSuccess {
+				current := prase(fetch())
+				if d.shouldUpgrade(current) {
+					msgR := d.toStringBeforeUpgrade(current)
+					writeLog("Upgrade")
+					sendMsg(msgR, upgradeSendStrategy)
+					d.upgrade(current)
+				}
 			}
 			time.Sleep(refershInterval * time.Minute)
 		}
-	}(&d)
+	}(d)
 	return 0
 }
 
 // 私聊发送任何消息都会回复当前情况
 func onPrivateMsg(subType, msgID int32, fromQQ int64, msg string, font int32) int32 {
 	writeLog(fmt.Sprintf("%d %s", fromQQ, msg))
+	if strings.Contains(msg, "url") {
+		cqp.SendPrivateMsg(fromQQ, urlList)
+		return 0
+	}
 	msgR := prase(fetch()).toString()
 	cqp.SendPrivateMsg(fromQQ, msgR)
 	return 0
@@ -310,6 +494,10 @@ func onPrivateMsg(subType, msgID int32, fromQQ int64, msg string, font int32) in
 func onGroupMsg(subType, msgID int32, fromGroup, fromQQ int64, fromAnonymous, msg string, font int32) int32 {
 	if strings.Contains(msg, "[CQ:at,qq="+selfQQID+"]") {
 		writeLog(fmt.Sprintf("%d %d %s", fromGroup, fromQQ, msg))
+		if strings.Contains(msg, "url") {
+			cqp.SendGroupMsg(fromGroup, urlList)
+			return 0
+		}
 		msgR := prase(fetch()).toString()
 		cqp.SendGroupMsg(fromGroup, msgR)
 	}
