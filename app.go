@@ -16,37 +16,37 @@ import (
 )
 
 /*****************************自定义数据请在此处修改**********************************/
-
-// 基本信息
-const appid string = "com.acdzh.dxy"
-
-//调试模式
-const isDevMode bool = false
-
 var willPraseSuccess bool = true
 
-// 主动刷新间隔
-const refershInterval = 5 // 分钟
+const (
+	// 基本信息
+	appid string = "com.acdzh.dxy"
 
-// 自定义查询子区域 (未对所有地市进行匹配, 如果失败请自行修改正则
-const provinceName string = "山东省"
-const provinceShortName string = "山东"
-const cityName string = "菏泽"
+	//调试模式
+	isDevMode bool = false
 
-// bot版本信息
-const currentVersion string = "v1.28.9.56" // 当前版本, 每次修改后会进行版本更新推送
-// 版本更新日志, 仅会推送一次
-const versionUpgradeLog string = `1. 修复拼写错误`
-const versionFileName string = "conf/dxy.cfg" // 存储版本号
-const logFilePath string = "data/log/"        // log文件目录 (log会以日期命名
-const shouldPushLog bool = true               // 是否在每次更新之后更新版本推送
+	// 主动刷新间隔
+	refershInterval = 5 // 分钟
 
-// url
-const dxyURL string = "https://3g.dxy.cn/newh5/view/pneumonia"                  // 数据来源url
-const baiduURL string = "https://voice.baidu.com/act/newpneumonia/newpneumonia" // 地图来源uurl
-const tencentURL string = "https://news.qq.com/zt2020/page/feiyan.htm"
-const devURL string = "http://127.0.0.1:5500/index.html" // 本地调试url
-const urlList string = `其他监测网址:
+	// 自定义查询子区域 (未对所有地市进行匹配, 如果失败请自行修改正则
+	provinceName      string = "山东省"
+	provinceShortName string = "山东"
+	cityName          string = "菏泽"
+
+	// bot版本信息
+	currentVersion string = "v1.30.10.59" // 当前版本, 每次修改后会进行版本更新推送
+	// 版本更新日志, 仅会推送一次
+	versionUpgradeLog string = `1. 关闭地图更新提醒`
+	versionFileName   string = "conf/dxy.cfg" // 存储版本号
+	logFilePath       string = "data/log/"    // log文件目录 (log会以日期命名
+	shouldPushLog     bool   = true           // 是否在每次更新之后更新版本推送
+
+	// url
+	dxyURL     string = "https://3g.dxy.cn/newh5/view/pneumonia"                // 数据来源url
+	baiduURL   string = "https://voice.baidu.com/act/newpneumonia/newpneumonia" // 地图来源uurl
+	tencentURL string = "https://news.qq.com/zt2020/page/feiyan.htm"
+	devURL     string = "http://127.0.0.1:5500/index.html" // 本地调试url
+	urlList    string = `其他监测网址:
 凤凰网: https://news.ifeng.com/c/special/7tPlDSzDgVk
 新浪: https://news.sina.cn/zt_d/yiqing0121
 百度: https://voice.baidu.com/act/newpneumonia/newpneumonia
@@ -55,27 +55,32 @@ const urlList string = `其他监测网址:
 网易: https://news.163.com/special/epidemic/
 头条: https://i.snssdk.com/feoffline/hot_list/template/hot_list/forum.html?forum_id=1656388947394568
 夸克: https://broccoli.uc.cn/apps/pneumonia/routes/index`
+)
 
-// qqGroup & qqID
-var selfQQID string = "1472745738"                    // bot自己的qq号
-var userQQGroupIDs = [...]int64{854378285, 361684286} // 普通用户qq群数组
-var devQQGroupIDs = [...]int64{584405782}             // 开发者调试用qq群数组
-var userQQIds = [...]int64{}                          // 普通用户订阅qq号数组
-var devQQIds = []int64{1069436872}                    // 开发者qq号数组
+var (
+	// qqGroup & qqID
+	selfQQID       string = "1472745738"                     // bot自己的qq号
+	userQQGroupIDs        = [...]int64{854378285, 361684286} // 普通用户qq群数组
+	devQQGroupIDs         = [...]int64{584405782}            // 开发者调试用qq群数组
+	userQQIds             = [...]int64{}                     // 普通用户订阅qq号数组
+	devQQIds              = []int64{1069436872}              // 开发者qq号数组
+)
 
-// 消息发送策略模板, 不要修改
-const sendToNobody int = 0     // 不发送给任何类型用户或群组
-const sendToUserAndDev int = 1 // 同时发送给普通和管理员用户或群组
-const sendTOUserOnly int = 2   // 仅发送给普通用户或群组
-const sendToDevOnly int = 3    // 仅发送给管理员用户或群组
+const (
+	// 消息发送策略模板, 不要修改
+	sendToNobody     int = 0 // 不发送给任何类型用户或群组
+	sendToUserAndDev int = 1 // 同时发送给普通和管理员用户或群组
+	sendTOUserOnly   int = 2 // 仅发送给普通用户或群组
+	sendToDevOnly    int = 3 // 仅发送给管理员用户或群组
 
-// 具体的消息发送策略 (格式为: 10 * 群消息策略 + 私聊消息策略
-const onlySendToPrivateDevStrategy int = 10*sendToNobody + sendToDevOnly
-const onlineMsgSendStrategy int = 10*sendToNobody + sendToDevOnly      // 上线提醒: 仅私聊发给管理员账号
-const firstDataSendStrategy int = 10*sendToDevOnly + sendToNobody      // 上线后拉取的初始数据: 仅发送到调试qq群
-const failedDataSendStrategy int = 10*sendToUserAndDev + sendToDevOnly // 出现错误: 仅私聊发送管理员, 并发送给所有群
-const versionSendStrategy int = 10*sendToUserAndDev + sendToDevOnly    // 版本日志: 发送给所有群, 但私聊仅发送给管理员
-const upgradeSendStrategy int = 10*sendToUserAndDev + sendToUserAndDev // 数据更新: 发送给所有群和用户
+	// 具体的消息发送策略 (格式为: 10 * 群消息策略 + 私聊消息策略
+	onlySendToPrivateDevStrategy int = 10*sendToNobody + sendToDevOnly
+	onlineMsgSendStrategy        int = 10*sendToNobody + sendToDevOnly        // 上线提醒: 仅私聊发给管理员账号
+	firstDataSendStrategy        int = 10*sendToDevOnly + sendToNobody        // 上线后拉取的初始数据: 仅发送到调试qq群
+	failedDataSendStrategy       int = 10*sendToUserAndDev + sendToDevOnly    // 出现错误: 仅私聊发送管理员, 并发送给所有群
+	versionSendStrategy          int = 10*sendToUserAndDev + sendToDevOnly    // 版本日志: 发送给所有群, 但私聊仅发送给管理员
+	upgradeSendStrategy          int = 10*sendToUserAndDev + sendToUserAndDev // 数据更新: 发送给所有群和用户
+)
 
 /*****************************自定义数据请在此处修改**********************************/
 
@@ -132,7 +137,7 @@ var arrHead = map[string]string{
 	"remark2":        "",                  // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
 	"remark3":        "",                  // ""
 	"remark4":        "",                  // ""
-	"remark5":        "",                  //
+	"remark5":        "",                  // ""
 	"generalRemark":  "备注: ",              // "疑似病例数来自国家卫健委数据，目前为全国数据，未分省市自治区等"
 	"abroadRemark":   "",                  // ""
 	"provinceNumber": provinceName + ": ", // 1 / 2 / 3 / 4
@@ -167,8 +172,8 @@ var allAttributes = [...]string{
 }
 
 var otherAttributes = [...]string{
-	"provinceNumber",
-	"cityNumber",
+	"provinceNumber", // 省份的数据
+	"cityNumber",     // 市的数据
 }
 
 var neededAttributes = [...]string{
@@ -177,21 +182,21 @@ var neededAttributes = [...]string{
 	"suspectedCount", // 5794
 	"deadCount",      // 82
 	"curedCount",     // 56
-	"provinceNumber",
-	"cityNumber",
-	"infectSource", // "野生动物，可能为中华菊头蝠"
-	"virus",        // "新型冠状病毒 2019-nCoV"
-	"passWay",      // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
-	"remark1",      // "易感人群: 暂时不明，病毒存在变异可能"
-	"remark2",      // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
-	"remark3",      // ""
-	"remark4",      // ""
-	"remark5",      // ""
-	"imgUrl",       // "https://img1.dxycdn.com/2020/0123/733/3392575782185696736-73.jpg"
-	"dailyPic",     // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
-	"dxyUrl",
-	"tencentUrl",
-	"version",
+	"provinceNumber", // 省份的数据
+	"cityNumber",     // 市的数据
+	"infectSource",   // "野生动物，可能为中华菊头蝠"
+	"virus",          // "新型冠状病毒 2019-nCoV"
+	"passWay",        // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
+	"remark1",        // "易感人群: 暂时不明，病毒存在变异可能"
+	"remark2",        // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
+	"remark3",        // ""
+	"remark4",        // ""
+	"remark5",        // ""
+	"imgUrl",         // "https://img1.dxycdn.com/2020/0123/733/3392575782185696736-73.jpg"
+	"dailyPic",       // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
+	"dxyUrl",         // 丁香园地址
+	"tencentUrl",     // 腾讯新闻地址
+	"version",        // 版本
 }
 
 var forCheckAttributes = [...]string{
@@ -199,18 +204,17 @@ var forCheckAttributes = [...]string{
 	"suspectedCount", // 5794
 	"deadCount",      // 82
 	"curedCount",     // 56
-	"provinceNumber",
-	"cityNumber",
-	"infectSource", // "野生动物，可能为中华菊头蝠"
-	"virus",        // "新型冠状病毒 2019-nCoV"
-	"passWay",      // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
-	"remark1",      // "易感人群: 暂时不明，病毒存在变异可能"
-	"remark2",      // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
-	"remark3",      // ""
-	"remark4",      // ""
-	"remark5",      // ""
-	"imgUrl",       // "https://img1.dxycdn.com/2020/0123/733/3392575782185696736-73.jpg"
-	"dailyPic",     // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
+	"provinceNumber", // 省份的数据
+	"cityNumber",     // 市的数据
+	"infectSource",   // "野生动物，可能为中华菊头蝠"
+	"virus",          // "新型冠状病毒 2019-nCoV"
+	"passWay",        // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
+	"remark1",        // "易感人群: 暂时不明，病毒存在变异可能"
+	"remark2",        // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
+	"remark3",        // ""
+	"remark4",        // ""
+	"remark5",        // ""
+	"dailyPic",       // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg" (趋势图)
 }
 
 type dxyDatas map[string]string
