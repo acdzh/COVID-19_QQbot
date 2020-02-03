@@ -15,8 +15,9 @@ import (
 	"github.com/Tnze/CoolQ-Golang-SDK/v2/cqp"
 )
 
-/*****************************自定义数据请在此处修改**********************************/
+/*****************************自定义数据请在此处修改 strat**********************************/
 var willPraseSuccess bool = true
+var lastSendAllAfterUpgradeTimeStr = ""
 
 const (
 	// 基本信息
@@ -28,15 +29,18 @@ const (
 	// 主动刷新间隔
 	refershInterval = 5 // 分钟
 
+	// 当间隔时长大于此值时, 发送全部内容, 否则仅发送更新部分
+	shouldSendAllAfterUpgradeInterval = 60 // 分钟
+
 	// 自定义查询子区域 (未对所有地市进行匹配, 如果失败请自行修改正则
 	provinceName      string = "山东省"
 	provinceShortName string = "山东"
 	cityName          string = "菏泽"
 
 	// bot版本信息
-	currentVersion string = "v1.30.10.59" // 当前版本, 每次修改后会进行版本更新推送
+	currentVersion string = "v2.3.20.56" // 当前版本, 每次修改后会进行版本更新推送
 	// 版本更新日志, 仅会推送一次
-	versionUpgradeLog string = `1. 关闭地图更新提醒`
+	versionUpgradeLog string = `1. 小bug`
 	versionFileName   string = "conf/dxy.cfg" // 存储版本号
 	logFilePath       string = "data/log/"    // log文件目录 (log会以日期命名
 	shouldPushLog     bool   = true           // 是否在每次更新之后更新版本推送
@@ -82,9 +86,123 @@ const (
 	upgradeSendStrategy          int = 10*sendToUserAndDev + sendToUserAndDev // 数据更新: 发送给所有群和用户
 )
 
-/*****************************自定义数据请在此处修改**********************************/
+/*****************************自定义数据请在此处修改 end**********************************/
 
-func sendMsg(msg string, strategy int) {
+/*********************************属性字典 start****************************************/
+var (
+	arrHead = map[string]string{
+		"createTimeStr":  "创建时间: ",            // 1579537899000
+		"modifyTimeStr":  "更新时间: ",            // 1580141884000
+		"infectSource":   "传染源: ",             // "野生动物，可能为中华菊头蝠"
+		"passWay":        "传播途径: ",            // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
+		"dailyPic":       "疫情趋势图: ",           // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
+		"summary":        "汇总: ",              // ""
+		"deleted":        "",                  // false
+		"countRemark":    "",                  // ""
+		"confirmedCount": "确诊: ",              // 2858
+		"suspectedCount": "疑似: ",              // 5794
+		"seriousCount":   "重症: ",              //
+		"curedCount":     "治愈: ",              // 56
+		"deadCount":      "死亡: ",              // 82
+		"virus":          "病毒: ",              // "新型冠状病毒 2019-nCoV"
+		"remark1":        "",                  // "易感人群: 暂时不明，病毒存在变异可能"
+		"remark2":        "",                  // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
+		"remark3":        "",                  // ""
+		"remark4":        "",                  // ""
+		"remark5":        "",                  // ""
+		"generalRemark":  "备注: ",              // "疑似病例数来自国家卫健委数据，目前为全国数据，未分省市自治区等"
+		"abroadRemark":   "",                  // ""
+		"provinceNumber": provinceName + ": ", // 1 / 2 / 3 / 4
+		"cityNumber":     cityName + "市: ",    // 1 / 2 / 3 / 4
+		"version":        "\nbot当前版本: ",
+		"dxyUrl":         "\n丁香园: ",
+		"tencentUrl":     "腾讯: ",
+	}
+
+	allAttributes = [...]string{
+		"createTime",     // 1579537899000
+		"modifyTime",     // 1580141884000
+		"infectSource",   // "野生动物，可能为中华菊头蝠"
+		"passWay",        // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
+		"imgUrl",         // "https://img1.dxycdn.com/2020/0123/733/3392575782185696736-73.jpg"
+		"dailyPic",       // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
+		"summary",        // ""
+		"deleted",        // false
+		"countRemark",    // ""
+		"confirmedCount", // 2858
+		"suspectedCount", // 5794
+		"curedCount",     // 56
+		"deadCount",      // 82
+		"seriousCount",   //
+		"suspectedIncr",  //
+		"confirmedIncr",  //
+		"curedIncr",      //
+		"deadIncr",       //
+		"seriousIncr",    //
+		"virus",          // "新型冠状病毒 2019-nCoV"
+		"remark1",        // "易感人群: 暂时不明，病毒存在变异可能"
+		"remark2",        // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
+		"remark3",        // ""
+		"remark4",        // ""
+		"remark5",        //
+		"generalRemark",  // "疑似病例数来自国家卫健委数据，目前为全国数据，未分省市自治区等"
+		"abroadRemark",   // ""
+	}
+
+	otherAttributes = [...]string{
+		"provinceNumber", // 省份的数据
+		"cityNumber",     // 市的数据
+		"createTimeStr",
+		"modifyTimeStr",
+	}
+
+	neededAttributes = [...]string{
+		"modifyTimeStr",  // 1580141884000
+		"confirmedCount", // 2858
+		"suspectedCount", // 5794
+		"seriousCount",   //
+		"deadCount",      // 82
+		"curedCount",     // 56
+		"provinceNumber", // 省份的数据
+		"cityNumber",     // 市的数据
+		"infectSource",   // "野生动物，可能为中华菊头蝠"
+		"virus",          // "新型冠状病毒 2019-nCoV"
+		"passWay",        // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
+		"remark1",        // "易感人群: 暂时不明，病毒存在变异可能"
+		"remark2",        // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
+		"remark3",        // ""
+		"remark4",        // ""
+		"remark5",        // ""
+		"dailyPic",       // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
+		"dxyUrl",         // 丁香园地址
+		"tencentUrl",     // 腾讯新闻地址
+		"version",        // 版本
+	}
+
+	forCheckAttributes = [...]string{
+		"confirmedCount", // 2858
+		"suspectedCount", // 5794
+		"seriousCount",   //
+		"deadCount",      // 82
+		"curedCount",     // 56
+		"provinceNumber", // 省份的数据
+		"cityNumber",     // 市的数据
+		"infectSource",   // "野生动物，可能为中华菊头蝠"
+		"virus",          // "新型冠状病毒 2019-nCoV"
+		"passWay",        // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
+		"remark1",        // "易感人群: 暂时不明，病毒存在变异可能"
+		"remark2",        // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
+		"remark3",        // ""
+		"remark4",        // ""
+		"remark5",        // ""
+		"dailyPic",       // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg" (趋势图)
+	}
+)
+
+/*********************************属性字典 end****************************************/
+
+/*********************************支持函数 start****************************************/
+func sendMsg(msg string, strategy int) { // 发送消息
 	groupStrategy := strategy / 10
 	privateStrategy := strategy % 10
 
@@ -110,7 +228,7 @@ func sendMsg(msg string, strategy int) {
 	}
 }
 
-func timeStampToString(t string) string {
+func timeStampToString(t string) string { // 时间格式化
 	if t == "" {
 		return "NaN"
 	}
@@ -118,157 +236,35 @@ func timeStampToString(t string) string {
 	return time.Unix(i/1000, 0).Format("2006-01-02 15:04:05 (北京时间)")
 }
 
-var arrHead = map[string]string{
-	"createTime":     "创建时间: ",            // 1579537899000
-	"modifyTime":     "更新时间: ",            // 1580141884000
-	"infectSource":   "传染源: ",             // "野生动物，可能为中华菊头蝠"
-	"passWay":        "传播途径: ",            // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
-	"imgUrl":         "\n疫情地图: ",          // "https://img1.dxycdn.com/2020/0123/733/3392575782185696736-73.jpg"
-	"dailyPic":       "疫情趋势图: ",           // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
-	"summary":        "汇总: ",              // ""
-	"deleted":        "",                  // false
-	"countRemark":    "",                  // ""
-	"confirmedCount": "确诊: ",              // 2858
-	"suspectedCount": "疑似: ",              // 5794
-	"curedCount":     "治愈: ",              // 56
-	"deadCount":      "死亡: ",              // 82
-	"virus":          "病毒: ",              // "新型冠状病毒 2019-nCoV"
-	"remark1":        "",                  // "易感人群: 暂时不明，病毒存在变异可能"
-	"remark2":        "",                  // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
-	"remark3":        "",                  // ""
-	"remark4":        "",                  // ""
-	"remark5":        "",                  // ""
-	"generalRemark":  "备注: ",              // "疑似病例数来自国家卫健委数据，目前为全国数据，未分省市自治区等"
-	"abroadRemark":   "",                  // ""
-	"provinceNumber": provinceName + ": ", // 1 / 2 / 3 / 4
-	"cityNumber":     cityName + "市: ",    // 1 / 2 / 3 / 4
-	"version":        "\nbot当前版本: ",
-	"dxyUrl":         "\n丁香园: ",
-	"tencentUrl":     "腾讯: ",
-}
-
-var allAttributes = [...]string{
-	"createTime",     // 1579537899000
-	"modifyTime",     // 1580141884000
-	"infectSource",   // "野生动物，可能为中华菊头蝠"
-	"passWay",        // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
-	"imgUrl",         // "https://img1.dxycdn.com/2020/0123/733/3392575782185696736-73.jpg"
-	"dailyPic",       // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
-	"summary",        // ""
-	"deleted",        // false
-	"countRemark",    // ""
-	"confirmedCount", // 2858
-	"suspectedCount", // 5794
-	"curedCount",     // 56
-	"deadCount",      // 82
-	"virus",          // "新型冠状病毒 2019-nCoV"
-	"remark1",        // "易感人群: 暂时不明，病毒存在变异可能"
-	"remark2",        // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
-	"remark3",        // ""
-	"remark4",        // ""
-	"remark5",        //
-	"generalRemark",  // "疑似病例数来自国家卫健委数据，目前为全国数据，未分省市自治区等"
-	"abroadRemark",   // ""
-}
-
-var otherAttributes = [...]string{
-	"provinceNumber", // 省份的数据
-	"cityNumber",     // 市的数据
-}
-
-var neededAttributes = [...]string{
-	"modifyTime",     // 1580141884000
-	"confirmedCount", // 2858
-	"suspectedCount", // 5794
-	"deadCount",      // 82
-	"curedCount",     // 56
-	"provinceNumber", // 省份的数据
-	"cityNumber",     // 市的数据
-	"infectSource",   // "野生动物，可能为中华菊头蝠"
-	"virus",          // "新型冠状病毒 2019-nCoV"
-	"passWay",        // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
-	"remark1",        // "易感人群: 暂时不明，病毒存在变异可能"
-	"remark2",        // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
-	"remark3",        // ""
-	"remark4",        // ""
-	"remark5",        // ""
-	"imgUrl",         // "https://img1.dxycdn.com/2020/0123/733/3392575782185696736-73.jpg"
-	"dailyPic",       // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
-	"dxyUrl",         // 丁香园地址
-	"tencentUrl",     // 腾讯新闻地址
-	"version",        // 版本
-}
-
-var forCheckAttributes = [...]string{
-	"confirmedCount", // 2858
-	"suspectedCount", // 5794
-	"deadCount",      // 82
-	"curedCount",     // 56
-	"provinceNumber", // 省份的数据
-	"cityNumber",     // 市的数据
-	"infectSource",   // "野生动物，可能为中华菊头蝠"
-	"virus",          // "新型冠状病毒 2019-nCoV"
-	"passWay",        // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
-	"remark1",        // "易感人群: 暂时不明，病毒存在变异可能"
-	"remark2",        // "潜伏期: 1~14 天均有，平均 10 天，潜伏期内存在传染性"
-	"remark3",        // ""
-	"remark4",        // ""
-	"remark5",        // ""
-	"dailyPic",       // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg" (趋势图)
-}
-
-type dxyDatas map[string]string
-
-func (d dxyDatas) toString() string {
-	s := ""
-	for _, arr := range neededAttributes {
-		lineHead := arrHead[arr]
-		lineBody := d[arr]
-		if lineHead != "" || lineBody != "" {
-			s += (lineHead + lineBody + "\n")
-		}
+func checkTimeInterval(t1, t2 string) bool { // 检查时间间隔是否超过一小时
+	t1Num, _ := strconv.Atoi(t1)                                        // ms
+	t2Num, _ := strconv.Atoi(t2)                                        // ms
+	forCheckInterval := shouldSendAllAfterUpgradeInterval * (60 * 1000) // ms
+	defer writeLog("[checkTimeInterval] t1: " + t1 + ", t2: " + t2 + ", lastSendAllAfterUpgradeTimeStr: " + lastSendAllAfterUpgradeTimeStr)
+	if t1Num-t2Num >= forCheckInterval {
+		lastSendAllAfterUpgradeTimeStr = t1
+		return true
 	}
-	return strings.TrimRight(s, "\n")
-}
-
-func (d dxyDatas) toStringBeforeUpgrade(new dxyDatas) string {
-	upgradeFormat := func(a, b string) string {
-		if a == b {
-			return a
-		}
-		return fmt.Sprintf("%s -> %s (已更新)", a, b)
-	}
-
-	s := ""
-	for _, arr := range neededAttributes {
-		lineHead := arrHead[arr]
-		lineBody := upgradeFormat(d[arr], new[arr])
-		if lineHead != "" || lineBody != "" {
-			s += (lineHead + lineBody + "\n")
-		}
-	}
-	return strings.TrimRight(s, "\n")
-}
-
-func (d dxyDatas) shouldUpgrade(new dxyDatas) bool {
-	for _, arr := range forCheckAttributes {
-		if d[arr] != new[arr] {
-			return true
-		}
+	if t2Num-t1Num >= forCheckInterval {
+		lastSendAllAfterUpgradeTimeStr = t2
+		return true
 	}
 	return false
 }
 
-func (d dxyDatas) upgrade(new dxyDatas) {
-	for _, arr := range allAttributes {
-		d[arr] = new[arr]
+func upgradeFormat(a, b string) string { // 格式化更新时的字符串
+	if a == b {
+		return a
 	}
-	for _, arr := range otherAttributes {
-		d[arr] = new[arr]
+	if a == "" {
+		a = "(新增)"
+	} else if b == "" {
+		b = "(删除)"
 	}
+	return fmt.Sprintf("%s -> %s", a, b)
 }
 
-func isFileExisted(filename string) bool {
+func isFileExisted(filename string) bool { // 文件是否存在
 	exist := true
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		exist = false
@@ -276,7 +272,10 @@ func isFileExisted(filename string) bool {
 	return exist
 }
 
-func writeLog(l string) {
+func writeLog(l string) { // 写 log
+	if isDevMode {
+		return
+	}
 	filename := logFilePath + time.Now().Format("2006-01-02") + ".log"
 	s := fmt.Sprintf("%v %s\n", time.Now().Format("15:04:05"), strings.Replace(l, "\n", "\"\n\"", -1))
 
@@ -291,7 +290,7 @@ func writeLog(l string) {
 	f.Close()
 }
 
-func checkVer() {
+func checkVer() { // 检查版本, 发更新日志
 	var oldVersion string
 	if isFileExisted(versionFileName) {
 		content, _ := ioutil.ReadFile(versionFileName)
@@ -300,6 +299,7 @@ func checkVer() {
 		os.Create(versionFileName)
 		oldVersion = "v0.0.0.0"
 	}
+	writeLog("[checkVer] current: " + currentVersion + ", old: " + oldVersion)
 
 	if currentVersion != oldVersion {
 		msgR := fmt.Sprintf("bot已更新: %s -> %s\n\n更新日志: %s", oldVersion, currentVersion, versionUpgradeLog)
@@ -309,6 +309,81 @@ func checkVer() {
 		f.Close()
 	}
 }
+
+/*********************************支持函数 end****************************************/
+
+/*********************************数据类型 dxyDatas start****************************************/
+
+type dxyDatas map[string]string
+
+func (d dxyDatas) toString() string {
+	s := ""
+	for _, arr := range neededAttributes {
+		lineHead := arrHead[arr]
+		lineBody := d[arr]
+		if lineHead != "" || lineBody != "" {
+			s += (lineHead + lineBody + "\n")
+		}
+	}
+	writeLog("[toString] s: " + strings.Replace(s, "\n", "\\n", 0))
+	return strings.TrimRight(s, "\n")
+}
+
+func (d dxyDatas) toStringBeforeUpgrade(new dxyDatas) string {
+	shouldShowAll := checkTimeInterval(new["modifyTime"], lastSendAllAfterUpgradeTimeStr)
+	writeLog(fmt.Sprintf("[toStringBeforeUpgrade] shouldShowAll: %v", shouldShowAll))
+	s := ""
+	for _, arr := range neededAttributes {
+		lineHead := arrHead[arr]
+		lineBody := upgradeFormat(d[arr], new[arr])
+		if (lineHead != "" || lineBody != "") && (shouldShowAll || d[arr] != new[arr]) {
+			s += (lineHead + lineBody + "\n")
+		}
+	}
+	writeLog("[toStringBeforeUpgrade] s: " + strings.Replace(s, "\n", "\\n", 0))
+	return strings.TrimRight(s, "\n")
+}
+
+func (d dxyDatas) shouldUpgrade(new dxyDatas) bool {
+	for _, arr := range forCheckAttributes {
+		if d[arr] != new[arr] {
+			writeLog("[shouldUpgrade] true")
+			return true
+		}
+	}
+	writeLog("[shouldUpgrade] false")
+	return false
+}
+
+func (d dxyDatas) upgrade(new dxyDatas) { // 更新数据
+	for _, arr := range allAttributes {
+		d[arr] = new[arr]
+	}
+	for _, arr := range otherAttributes {
+		d[arr] = new[arr]
+	}
+	writeLog("[upgrade]")
+}
+
+func (d dxyDatas) dataFmt() { // 获取到初始数据后, 再进行一些加工
+	d["createTimeStr"] = timeStampToString(d["createTime"])
+	d["modifyTimeStr"] = timeStampToString(d["modifyTime"])
+	d["dxyUrl"] = dxyURL
+	d["tencentUrl"] = tencentURL
+	d["version"] = currentVersion
+
+	for _, t := range [...]string{"confirmed", "suspected", "serious", "dead", "cured"} {
+		if strings.Contains(d[t+"Incr"], "-") {
+			d[t+"Count"] = fmt.Sprintf("%s (较昨日 %s)", d[t+"Count"], d[t+"Incr"])
+		} else {
+			d[t+"Count"] = fmt.Sprintf("%s (较昨日 +%s)", d[t+"Count"], d[t+"Incr"])
+		}
+	}
+}
+
+/*********************************数据类型 dxyDatas end****************************************/
+
+/*********************************获取数据 dxyDatas start****************************************/
 
 func fetch() string {
 	if !willPraseSuccess {
@@ -331,62 +406,30 @@ func fetch() string {
 	buf := bytes.NewBuffer([]byte{})
 	buf.ReadFrom(res.Body)
 	html := string(buf.Bytes())
+	writeLog("[fetch]")
 	return html
-}
-
-func fetchMap() string {
-	if !willPraseSuccess {
-		return ""
-	}
-	url := baiduURL
-
-	req, _ := http.NewRequest("GET", url, strings.NewReader(""))
-	myHeaders := map[string]string{
-		"Accept":     "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-		"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/72.0"}
-	for k, v := range myHeaders {
-		req.Header.Set(k, v)
-	}
-
-	client := &http.Client{}
-	res, _ := client.Do(req)
-
-	buf := bytes.NewBuffer([]byte{})
-	buf.ReadFrom(res.Body)
-	html := string(buf.Bytes())
-
-	result := regexp.MustCompile(`"mapSrc":"https:\\/\\/mms-res.cdn.bcebos.com\\/mms-res\\/voicefe\\/captain\\/images\\/(.*?).png`).FindString(html)
-	if len(result) == 0 {
-		return dxyURL
-	}
-	return strings.Replace(result[10:], "\\", "", -1)
 }
 
 func prase(html string) dxyDatas {
 	sprintf := fmt.Sprintf
 	praseSucccess := true
-	errorMsg := "网页已改版, 解析失败. 管理员快来修bug."
+	errorMsg := "网页已改版, 解析失败, 暂停更新. 管理员快来修bug."
 	d := make(dxyDatas)
 
-	contryInformationResults := regexp.MustCompile(`{"id":([0-9]+),"createTime":([0-9]+),"modifyTime":([0-9]+),"infectSource":"(.*?)","passWay":"(.*?)","imgUrl":"(.*?)","dailyPic":"(.*?)","summary":"(.*?)","deleted":([\S]+),"countRemark":"(.*?)","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),"virus":"(.*?)","remark1":"(.*?)","remark2":"(.*?)","remark3":"(.*?)","remark4":"(.*?)","remark5":"(.*?)","generalRemark":"(.*?)","abroadRemark":"(.*?)"}`).FindStringSubmatch(html)
+	contryInformationResults := regexp.MustCompile(`{"id":([0-9]+),"createTime":([0-9]+),"modifyTime":([0-9]+),"infectSource":"(.*?)","passWay":"(.*?)","imgUrl":"(.*?)","dailyPic":"(.*?)","summary":"(.*?)","deleted":([\S]+),"countRemark":"(.*?)","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),"seriousCount":([0-9]+),"suspectedIncr":([0-9]+),"confirmedIncr":([0-9]+),"curedIncr":([0-9]+),"deadIncr":([0-9]+),"seriousIncr":([0-9]+),"virus":"(.*?)","remark1":"(.*?)","remark2":"(.*?)","remark3":"(.*?)","remark4":"(.*?)","remark5":"(.*?)","generalRemark":"(.*?)","abroadRemark":"(.*?)",`).FindStringSubmatch(html)
 
 	if len(contryInformationResults) == 0 {
 		praseSucccess = false
 		errorMsg += "\nlen(contryInformationResults) == 0 !"
 		for _, arr := range allAttributes {
-			d[arr] = ""
+			d[arr] = "%s"
 		}
 	} else {
 		for index, arr := range allAttributes {
 			d[arr] = contryInformationResults[index+2]
 		}
 	}
-	d["createTime"] = timeStampToString(d["createTime"])
-	d["modifyTime"] = timeStampToString(d["modifyTime"])
-	d["dxyUrl"] = dxyURL
-	d["tencentUrl"] = tencentURL
-	d["imgUrl"] = fetchMap()
-	d["version"] = currentVersion
+	d.dataFmt()
 
 	provinceInformationResults := regexp.MustCompile(
 		sprintf(`"provinceShortName":"%s","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),`, provinceShortName)).FindStringSubmatch(html)
@@ -404,7 +447,7 @@ func prase(html string) dxyDatas {
 	}
 
 	cityInformationResults := regexp.MustCompile(
-		sprintf(`{"cityName":"%s","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+)}`, cityName)).FindStringSubmatch(html)
+		sprintf(`{"cityName":"%s","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),`, cityName)).FindStringSubmatch(html)
 
 	if len(cityInformationResults) == 0 {
 		errorMsg += "\nlen(cityInformationResults) == 0"
@@ -433,13 +476,20 @@ func prase(html string) dxyDatas {
 	return d
 }
 
+/*********************************获取数据 dxyDatas end****************************************/
+
 func main() {
 	if isDevMode {
 		html := fetch()
 		d := prase(html)
+		lastSendAllAfterUpgradeTimeStr = d["modifyTime"]
 		dd := prase(html)
-		dd["deadCount"] = "9843"
-		fmt.Println(d)
+		dd["deadCount"] = "9843 (较昨日 +59)"
+		//dd["modifyTime"] = "1580722478000"
+		for k, v := range d {
+			fmt.Println(k, v)
+		}
+
 		fmt.Println()
 		fmt.Println(d.toString())
 		fmt.Println()
@@ -459,19 +509,20 @@ func init() {
 	cqp.Enable = onEnable
 }
 
-// 定时查询, 当数据更新时发送消息
 func onEnable() int32 {
 	sendMsg("I am online!", onlineMsgSendStrategy)
 	writeLog(fmt.Sprintf("%s", cqp.AppID))
 	checkVer()
 	d := prase(fetch())
+	lastSendAllAfterUpgradeTimeStr = d["modifyTime"]
+	writeLog("[onEnable] 初始化, lastSendAllAfterUpgradeTimeStr: " + lastSendAllAfterUpgradeTimeStr)
 	go func(d dxyDatas) {
 		for {
 			if willPraseSuccess {
 				current := prase(fetch())
 				if d.shouldUpgrade(current) {
 					msgR := d.toStringBeforeUpgrade(current)
-					writeLog("Upgrade")
+					writeLog("[onEnable] check upgrade")
 					sendMsg(msgR, upgradeSendStrategy)
 					d.upgrade(current)
 				}
@@ -484,7 +535,7 @@ func onEnable() int32 {
 
 // 私聊发送任何消息都会回复当前情况
 func onPrivateMsg(subType, msgID int32, fromQQ int64, msg string, font int32) int32 {
-	writeLog(fmt.Sprintf("%d %s", fromQQ, msg))
+	writeLog(fmt.Sprintf("[onPrivateMsg] %d %s", fromQQ, msg))
 	if strings.Contains(msg, "url") {
 		cqp.SendPrivateMsg(fromQQ, urlList)
 		return 0
@@ -497,7 +548,7 @@ func onPrivateMsg(subType, msgID int32, fromQQ int64, msg string, font int32) in
 // 群聊中@bot即回复当前情况
 func onGroupMsg(subType, msgID int32, fromGroup, fromQQ int64, fromAnonymous, msg string, font int32) int32 {
 	if strings.Contains(msg, "[CQ:at,qq="+selfQQID+"]") {
-		writeLog(fmt.Sprintf("%d %d %s", fromGroup, fromQQ, msg))
+		writeLog(fmt.Sprintf("[onGroupMsg] %d %d %s", fromGroup, fromQQ, msg))
 		if strings.Contains(msg, "url") {
 			cqp.SendGroupMsg(fromGroup, urlList)
 			return 0
