@@ -38,7 +38,7 @@ const (
 	cityName          string = "菏泽"
 
 	// bot版本信息
-	currentVersion string = "v2.3.20.56" // 当前版本, 每次修改后会进行版本更新推送
+	currentVersion string = "v2.3.22.38" // 当前版本, 每次修改后会进行版本更新推送
 	// 版本更新日志, 仅会推送一次
 	versionUpgradeLog string = `1. 小bug`
 	versionFileName   string = "conf/dxy.cfg" // 存储版本号
@@ -416,7 +416,7 @@ func prase(html string) dxyDatas {
 	errorMsg := "网页已改版, 解析失败, 暂停更新. 管理员快来修bug."
 	d := make(dxyDatas)
 
-	contryInformationResults := regexp.MustCompile(`{"id":([0-9]+),"createTime":([0-9]+),"modifyTime":([0-9]+),"infectSource":"(.*?)","passWay":"(.*?)","imgUrl":"(.*?)","dailyPic":"(.*?)","summary":"(.*?)","deleted":([\S]+),"countRemark":"(.*?)","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),"seriousCount":([0-9]+),"suspectedIncr":([0-9]+),"confirmedIncr":([0-9]+),"curedIncr":([0-9]+),"deadIncr":([0-9]+),"seriousIncr":([0-9]+),"virus":"(.*?)","remark1":"(.*?)","remark2":"(.*?)","remark3":"(.*?)","remark4":"(.*?)","remark5":"(.*?)","generalRemark":"(.*?)","abroadRemark":"(.*?)",`).FindStringSubmatch(html)
+	contryInformationResults := regexp.MustCompile(`{"id":([0-9]+),"createTime":([0-9]+),"modifyTime":([0-9]+),"infectSource":"(.*?)","passWay":"(.*?)","imgUrl":"(.*?)","dailyPic":"(.*?)","dailyPics":\[.*?\],"summary":"(.*?)","deleted":([\S]+),"countRemark":"(.*?)","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),"seriousCount":([0-9]+),"suspectedIncr":([0-9]+),"confirmedIncr":([0-9]+),"curedIncr":([0-9]+),"deadIncr":([0-9]+),"seriousIncr":([0-9]+),"virus":"(.*?)","remark1":"(.*?)","remark2":"(.*?)","remark3":"(.*?)","remark4":"(.*?)","remark5":"(.*?)","note1":".*?","note2":".*?","note3":".*?","generalRemark":"(.*?)","abroadRemark":"(.*?)",`).FindStringSubmatch(html)
 
 	if len(contryInformationResults) == 0 {
 		praseSucccess = false
@@ -467,6 +467,7 @@ func prase(html string) dxyDatas {
 				fmt.Println(errorMsg)
 			} else {
 				sendMsg(errorMsg, failedDataSendStrategy)
+				writeLog("[prase] error " + errorMsg)
 
 			}
 		}
@@ -519,10 +520,10 @@ func onEnable() int32 {
 	go func(d dxyDatas) {
 		for {
 			if willPraseSuccess {
+				writeLog("[onEnable] start check upgrade")
 				current := prase(fetch())
 				if d.shouldUpgrade(current) {
 					msgR := d.toStringBeforeUpgrade(current)
-					writeLog("[onEnable] check upgrade")
 					sendMsg(msgR, upgradeSendStrategy)
 					d.upgrade(current)
 				}
