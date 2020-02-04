@@ -1,21 +1,24 @@
 package main
 
 /*****************************自定义数据请在此处修改 strat**********************************/
-var willPraseSuccess bool = true
-var lastSendAllAfterUpgradeTime int = 0
 
+//运行模式
 const (
-	// 基本信息
-	appid string = "com.acdzh.dxy"
+	runModeDevInConsole      int = 1 // 控制台调试
+	runModeDevOnLocalMachine int = 2 // 实机测试
+	runModeProduct           int = 3 // 生产环境
 
-	//调试模式
-	isDevMode bool = false
+	// globalRunMode = runModeDevInConsole
+	// globalRunMode = runModeDevOnLocalMachine
+	globalRunMode = runModeProduct
+)
 
-	// 主动刷新间隔
-	refershInterval = 5 // 分钟
+// 关于更新
+const (
+	//
+	refershInterval = 5 * 60 // 秒, 主动刷新间隔
 
-	// 当间隔时长大于此值时, 发送全部内容, 否则仅发送更新部分
-	shouldSendAllAfterUpgradeInterval = 60 // 分钟
+	shouldSendAllAfterUpgradeInterval = 60 // 分钟, 当间隔时长大于此值时, 发送全部内容, 否则仅发送更新部分
 
 	// 自定义查询子区域 (未对所有地市进行匹配, 如果失败请自行修改正则
 	provinceName       string = "山东省"
@@ -24,19 +27,49 @@ const (
 	provinceName2      string = "上海市"
 	provinceShortName2 string = "上海"
 	cityName2          string = "嘉定区"
+)
+
+// 基本信息
+const (
+	appid string = "com.acdzh.dxy" // 务必正确填写
 
 	// bot版本信息
-	currentVersion string = "v2.4.2.53 beta" // 当前版本, 每次修改后会进行版本更新推送
+	currentVersion string = "v2.4.17.39" // 当前版本, 每次修改后会进行版本更新推送
 	// 版本更新日志, 仅会推送一次
-	versionUpgradeLog string = `
-1. 项目整体架构重构 (巨 tm 大的重构)
-2. 更改解析方式: regexp -> json, 再也不怕页面改版了
-3. 改动较大, 可能有 bug (我也不是很清楚有些地方为什么可以运行...)`
-	versionFileName string = "conf/dxy.cfg" // 存储版本号
-	logFilePath     string = "data/log/"    // log文件目录 (log会以日期命名
-	shouldPushLog   bool   = true           // 是否在每次更新之后更新版本推送
+	versionFileName   string = "conf/dxy.cfg" // 存储版本号
+	logFilePath       string = "data/log/"    // log文件目录 (log会以日期命名
+	shouldPushLog     bool   = true           // 是否在更新之后更新版本推送
+	versionUpgradeLog string = `1. 全tm是bug...`
+)
 
-	// url
+// how to send msg
+const (
+	// 消息发送策略模板, 不要修改
+	sendToNobody     int = 0 // 不发送给任何类型用户或群组
+	sendToUserAndDev int = 1 // 同时发送给普通和管理员用户或群组
+	sendTOUserOnly   int = 2 // 仅发送给普通用户或群组
+	sendToDevOnly    int = 3 // 仅发送给管理员用户或群组
+
+	// 具体的消息发送策略 (格式为: 10 * 群消息策略 + 私聊消息策略
+	onlySendToPrivateDevStrategy int = 10*sendToNobody + sendToDevOnly        // 仅发送给管理员QQ
+	onlineMsgSendStrategy        int = 10*sendToNobody + sendToDevOnly        // 上线提醒: 仅私聊发给管理员账号
+	firstDataSendStrategy        int = 10*sendToDevOnly + sendToNobody        // 上线后拉取的初始数据: 仅发送到调试qq群
+	failedDataSendStrategy       int = 10*sendToUserAndDev + sendToDevOnly    // 出现错误: 仅私聊发送管理员, 并发送给所有群
+	versionSendStrategy          int = 10*sendToUserAndDev + sendToDevOnly    // 版本日志: 发送给所有群, 但私聊仅发送给管理员
+	upgradeSendStrategy          int = 10*sendToUserAndDev + sendToUserAndDev // 数据更新: 发送给所有群和用户
+)
+
+// qqGroup & qqID
+var (
+	selfQQID       string = "1472745738"                     // bot自己的qq号
+	userQQGroupIDs        = [...]int64{854378285, 361684286} // 普通用户qq群数组
+	devQQGroupIDs         = [...]int64{584405782}            // 开发者调试用qq群数组
+	userQQIds             = [...]int64{}                     // 普通用户订阅qq号数组
+	devQQIds              = []int64{1069436872}              // 开发者qq号数组
+)
+
+// url
+const (
 	dxyURL     string = "https://3g.dxy.cn/newh5/view/pneumonia"                // 数据来源url
 	baiduURL   string = "https://voice.baidu.com/act/newpneumonia/newpneumonia" // 地图来源uurl
 	tencentURL string = "https://news.qq.com/zt2020/page/feiyan.htm"
@@ -52,27 +85,6 @@ const (
 夸克: https://broccoli.uc.cn/apps/pneumonia/routes/index`
 )
 
-var (
-	// qqGroup & qqID
-	selfQQID       string = "1472745738"                     // bot自己的qq号
-	userQQGroupIDs        = [...]int64{854378285, 361684286} // 普通用户qq群数组
-	devQQGroupIDs         = [...]int64{584405782}            // 开发者调试用qq群数组
-	userQQIds             = [...]int64{}                     // 普通用户订阅qq号数组
-	devQQIds              = []int64{1069436872}              // 开发者qq号数组
-)
-
-const (
-	// 消息发送策略模板, 不要修改
-	sendToNobody     int = 0 // 不发送给任何类型用户或群组
-	sendToUserAndDev int = 1 // 同时发送给普通和管理员用户或群组
-	sendTOUserOnly   int = 2 // 仅发送给普通用户或群组
-	sendToDevOnly    int = 3 // 仅发送给管理员用户或群组
-
-	// 具体的消息发送策略 (格式为: 10 * 群消息策略 + 私聊消息策略
-	onlySendToPrivateDevStrategy int = 10*sendToNobody + sendToDevOnly
-	onlineMsgSendStrategy        int = 10*sendToNobody + sendToDevOnly        // 上线提醒: 仅私聊发给管理员账号
-	firstDataSendStrategy        int = 10*sendToDevOnly + sendToNobody        // 上线后拉取的初始数据: 仅发送到调试qq群
-	failedDataSendStrategy       int = 10*sendToUserAndDev + sendToDevOnly    // 出现错误: 仅私聊发送管理员, 并发送给所有群
-	versionSendStrategy          int = 10*sendToUserAndDev + sendToDevOnly    // 版本日志: 发送给所有群, 但私聊仅发送给管理员
-	upgradeSendStrategy          int = 10*sendToUserAndDev + sendToUserAndDev // 数据更新: 发送给所有群和用户
-)
+// 全局变量
+var willPraseSuccess bool = true            // 标识是否会解析失败
+var lastSendAllAfterUpgradeTime float64 = 0 // 上一次更新推送全部项是什么时候(unix时间戳 / ms)

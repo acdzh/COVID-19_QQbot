@@ -7,7 +7,7 @@ var (
 		"modifyTimeStr":   "更新时间: ",             // 1580141884000
 		"infectSource":    "传染源: ",              // "野生动物，可能为中华菊头蝠"
 		"passWay":         "传播途径: ",             // "未完全掌握，存在人传人、医务人员感染、一定范围社区传播"
-		"dailyPic":        "疫情趋势图: ",            // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
+		"dailyPic":        "疫情趋势图: ",            // ["https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"]
 		"dailyPics":       "疫情趋势图: ",            //
 		"summary":         "汇总: ",               // ""
 		"deleted":         "",                   // false
@@ -56,7 +56,7 @@ var (
 		"remark3",         // ""
 		"remark4",         // ""
 		"remark5",         // ""
-		"dailyPics",       // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"
+		"dailyPics",       // ["https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"]
 		"dxyUrl",          // 丁香园地址
 		"tencentUrl",      // 腾讯新闻地址
 		"version",         // 版本
@@ -80,6 +80,6 @@ var (
 		"note1",           // ""
 		"note2",           // ""
 		"note3",           // ""
-		"dailyPic",        // "https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg" (趋势图)
+		"dailyPics",       // ["https://img1.dxycdn.com/2020/0127/350/3393218957833514634-73.jpg"] (趋势图)
 	}
 )

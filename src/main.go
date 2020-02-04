@@ -8,26 +8,30 @@ import (
 	"main/cqp"
 )
 
-func main() {
-	if isDevMode {
-		html := fetch()
-		d := prase(html)
-		lastSendAllAfterUpgradeTime = int(d["modifyTime"].(float64))
-		writeLog(fmt.Sprintf("%d\n", lastSendAllAfterUpgradeTime))
-		dd := prase(html)
-		dd["deadCount"] = "9843 (较昨日 +59)"
-		dd["modifyTime"] = 1580722478000.0
-		for k, v := range d {
-			writeLog(fmt.Sprintf("%v, %v", k, v))
-		}
+func consoleTest() {
+	html := fetch()
+	d := prase(html)
+	lastSendAllAfterUpgradeTime = d["modifyTime"].(float64)
+	writeLog(fmt.Sprintf("%v\n", lastSendAllAfterUpgradeTime))
+	dd := prase(html)
+	dd["deadCount"] = "9843 (较昨日 +59)"
+	dd["modifyTime"] = 1580722478000.0
+	for k, v := range d {
+		writeLog(fmt.Sprintf("%v, %v", k, v))
+	}
 
-		writeLog("")
-		writeLog(d.toString())
-		writeLog("")
-		writeLog(d.toStringBeforeUpgrade(dd))
-		d.upgrade(dd)
-		writeLog("")
-		writeLog(d.toString())
+	writeLog("")
+	writeLog(d.toString())
+	writeLog("")
+	writeLog(d.toStringBeforeUpgrade(dd))
+	d.upgrade(dd)
+	writeLog("")
+	writeLog(d.toString())
+}
+
+func main() {
+	if globalRunMode == runModeDevInConsole {
+		consoleTest()
 	} else {
 		cqp.Main()
 	}
@@ -38,6 +42,7 @@ func init() {
 	cqp.PrivateMsg = onPrivateMsg
 	cqp.GroupMsg = onGroupMsg
 	cqp.Enable = onEnable
+	cqp.Exit = onExit
 }
 
 func onEnable() int32 {
@@ -45,8 +50,8 @@ func onEnable() int32 {
 	writeLog(fmt.Sprintf("%s", cqp.AppID))
 	checkVer()
 	d := prase(fetch())
-	lastSendAllAfterUpgradeTime = int(d["modifyTime"].(float64))
-	writeLog(fmt.Sprintf("[onEnable] 初始化, lastSendAllAfterUpgradeTimeStr: %d", lastSendAllAfterUpgradeTime))
+	lastSendAllAfterUpgradeTime = d["modifyTime"].(float64)
+	writeLog(fmt.Sprintf("[onEnable] 初始化, lastSendAllAfterUpgradeTimeStr: %v", lastSendAllAfterUpgradeTime))
 	go func(d dxyDatas) {
 		for {
 			if willPraseSuccess {
@@ -58,7 +63,7 @@ func onEnable() int32 {
 					d.upgrade(current)
 				}
 			}
-			time.Sleep(refershInterval * time.Minute)
+			time.Sleep(refershInterval * time.Second)
 		}
 	}(d)
 	return 0
@@ -94,5 +99,11 @@ func onGroupMsg(subType, msgID int32, fromGroup, fromQQ int64, fromAnonymous, ms
 		msgR := prase(fetch()).toString()
 		cqp.SendGroupMsg(fromGroup, msgR)
 	}
+	return 0
+}
+
+func onExit() int32 {
+	writeLog("exit !")
+	sendMsg("exit !", failedDataSendStrategy)
 	return 0
 }

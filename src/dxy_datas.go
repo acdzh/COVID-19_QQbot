@@ -27,14 +27,17 @@ func (d dxyDatas) toString() string {
 }
 
 func (d dxyDatas) toStringBeforeUpgrade(new dxyDatas) string {
-	shouldShowAll := checkTimeInterval(int(new["modifyTime"].(float64)), lastSendAllAfterUpgradeTime)
+	shouldShowAll := checkTimeInterval(new["modifyTime"].(float64), lastSendAllAfterUpgradeTime)
 	writeLog(fmt.Sprintf("[toStringBeforeUpgrade] shouldShowAll: %v", shouldShowAll))
 	s := ""
 	for _, arr := range neededAttributes {
-		lineHead := arrHead[arr]
-		lineBody := upgradeFormat(itos(d[arr]), itos(new[arr]))
-		if (lineHead != "" || lineBody != "") && (shouldShowAll || d[arr] != new[arr]) {
+		var lineHead string = arrHead[arr]
+		var lineBody string = upgradeFormat(itos(d[arr]), itos(new[arr]))
+		//writeLog(fmt.Sprintf("[toStringBeforeUpgrade] lineHead: \"%s\", lineBody: \"%s\"", lineHead, lineBody))
+		if (lineHead != "" || lineBody != "") && (shouldShowAll || itos(d[arr]) != itos(new[arr])) {
+			//writeLog(fmt.Sprintf("[toStringBeforeUpgrade] before update s: \"%s\"", s))
 			s += (lineHead + lineBody + "\n")
+			//writeLog(fmt.Sprintf("[toStringBeforeUpgrade] update s: \"%s\"", s))
 		}
 	}
 	writeLog("[toStringBeforeUpgrade] s: " + strings.Replace(s, "\n", "\\n", 0))
@@ -43,7 +46,7 @@ func (d dxyDatas) toStringBeforeUpgrade(new dxyDatas) string {
 
 func (d dxyDatas) shouldUpgrade(new dxyDatas) bool {
 	for _, arr := range forCheckAttributes {
-		if d[arr] != new[arr] {
+		if itos(d[arr]) != itos(new[arr]) {
 			writeLog("[shouldUpgrade] true")
 			return true
 		}

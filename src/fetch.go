@@ -15,7 +15,12 @@ func fetch() string {
 	if !willPraseSuccess {
 		return ""
 	}
-	url := dxyURL
+	var url string
+	if globalRunMode == runModeDevOnLocalMachine {
+		url = devURL
+	} else {
+		url = dxyURL
+	}
 
 	req, _ := http.NewRequest("GET", url, strings.NewReader(""))
 	myHeaders := map[string]string{
@@ -119,13 +124,8 @@ func prase(html string) dxyDatas {
 
 	if praseSucccess == false {
 		if willPraseSuccess {
-			if isDevMode {
-				fmt.Println(errorMsg)
-			} else {
-				sendMsg(errorMsg, failedDataSendStrategy)
-				writeLog("[prase] error " + errorMsg)
-
-			}
+			writeLog("[prase] error " + errorMsg)
+			sendMsg(errorMsg, failedDataSendStrategy)
 		}
 		willPraseSuccess = false
 	}
