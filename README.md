@@ -26,7 +26,10 @@ golang + gcc
 
 ## 构建
 
-执行`build.cmd`
+```bash
+cd src
+cmd /c "build.cmd"
+```
 
 将生成的 app.dll 和 app.json 拷贝至 `酷Q根目录/dev/com.acdzh.dxy/`, 最后一级目录视你修改的包名而定
 
