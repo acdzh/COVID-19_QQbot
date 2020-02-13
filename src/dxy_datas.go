@@ -69,9 +69,9 @@ func (d dxyDatas) dataFmt() { // 获取到初始数据后, 再进行一些加工
 	d["tencentUrl"] = tencentURL
 	d["version"] = currentVersion
 
-	for _, t := range [...]string{"confirmed", "suspected", "serious", "dead", "cured"} {
+	for _, t := range [...]string{"currentConfirmed", "confirmed", "suspected", "serious", "dead", "cured"} {
 		if d[t+"Incr"] == nil {
-			d[t+"Count"] = fmt.Sprintf("%v (较昨日无变化)", d[t+"Count"])
+			d[t+"Count"] = fmt.Sprintf("%v (较昨日 +nil)", d[t+"Count"])
 		} else {
 			if strings.Contains(itos(d[t+"Incr"]), "-") {
 				d[t+"Count"] = fmt.Sprintf("%v (较昨日 %v)", d[t+"Count"], d[t+"Incr"])

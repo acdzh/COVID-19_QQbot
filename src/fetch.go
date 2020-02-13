@@ -63,63 +63,67 @@ func prase(html string) dxyDatas {
 	d.dataFmt()
 
 	provinceInformationResults := regexp.MustCompile(
-		sprintf(`"provinceShortName":"%s","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),`, provinceShortName)).FindStringSubmatch(html)
+		sprintf(`"provinceShortName":"%s","currentConfirmedCount":([0-9]+),"confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),`, provinceShortName)).FindStringSubmatch(html)
 
 	if len(provinceInformationResults) == 0 {
 		errorMsg += "\nlen(provinceInformationResults) == 0 !"
 		praseSucccess = false
-		d["provinceNumber"] = `%s / %s / %s / %s`
+		d["provinceNumber"] = `%s / %s / %s / %s / %s`
 	} else {
-		d["provinceNumber"] = sprintf("%s / %s / %s / %s",
+		d["provinceNumber"] = sprintf("%s / %s / %s / %s /%s",
 			provinceInformationResults[1],
 			provinceInformationResults[2],
+			provinceInformationResults[3],
 			provinceInformationResults[4],
-			provinceInformationResults[3])
+			provinceInformationResults[5])
 	}
 
 	provinceInformationResults2 := regexp.MustCompile(
-		sprintf(`"provinceShortName":"%s","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),`, provinceShortName2)).FindStringSubmatch(html)
+		sprintf(`"provinceShortName":"%s","currentConfirmedCount":([0-9]+),"confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),`, provinceShortName2)).FindStringSubmatch(html)
 
 	if len(provinceInformationResults2) == 0 {
 		errorMsg += "\nlen(provinceInformationResults2) == 0 !"
 		praseSucccess = false
-		d["provinceNumber2"] = `%s / %s / %s / %s`
+		d["provinceNumber2"] = `%s / %s / %s / %s / %s`
 	} else {
-		d["provinceNumber2"] = sprintf("%s / %s / %s / %s",
+		d["provinceNumber2"] = sprintf("%s / %s / %s / %s / %s",
 			provinceInformationResults2[1],
 			provinceInformationResults2[2],
+			provinceInformationResults2[3],
 			provinceInformationResults2[4],
-			provinceInformationResults2[3])
+			provinceInformationResults2[5])
 	}
 
 	cityInformationResults := regexp.MustCompile(
-		sprintf(`{"cityName":"%s","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),`, cityName)).FindStringSubmatch(html)
+		sprintf(`{"cityName":"%s","currentConfirmedCount":([0-9]+),"confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),`, cityName)).FindStringSubmatch(html)
 
 	if len(cityInformationResults) == 0 {
 		errorMsg += "\nlen(cityInformationResults) == 0"
 		praseSucccess = false
-		d["cityNumber"] = `%s / %s / %s / %s`
+		d["cityNumber"] = `%s / %s / %s / %s / %s`
 	} else {
-		d["cityNumber"] = sprintf("%s / %s / %s / %s",
+		d["cityNumber"] = sprintf("%s / %s / %s / %s / %s",
 			cityInformationResults[1],
 			cityInformationResults[2],
+			cityInformationResults[3],
 			cityInformationResults[4],
-			cityInformationResults[3])
+			cityInformationResults[5])
 	}
 
 	cityInformationResults2 := regexp.MustCompile(
-		sprintf(`{"cityName":"%s","confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),`, cityName2)).FindStringSubmatch(html)
+		sprintf(`{"cityName":"%s","currentConfirmedCount":([0-9]+),"confirmedCount":([0-9]+),"suspectedCount":([0-9]+),"curedCount":([0-9]+),"deadCount":([0-9]+),`, cityName2)).FindStringSubmatch(html)
 
 	if len(cityInformationResults2) == 0 {
 		errorMsg += "\nlen(cityInformationResults2) == 0"
 		praseSucccess = false
-		d["cityNumber2"] = `%s / %s / %s / %s`
+		d["cityNumber2"] = `%s / %s / %s / %s / %s`
 	} else {
-		d["cityNumber2"] = sprintf("%s / %s / %s / %s",
+		d["cityNumber2"] = sprintf("%s / %s / %s / %s / %s",
 			cityInformationResults2[1],
 			cityInformationResults2[2],
+			cityInformationResults2[3],
 			cityInformationResults2[4],
-			cityInformationResults2[3])
+			cityInformationResults2[5])
 	}
 
 	if praseSucccess == false {

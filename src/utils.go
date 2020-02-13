@@ -74,7 +74,7 @@ func upgradeFormat(a, b string) string { // 格式化更新时的字符串
 	} else if b == "" {
 		b = "(删除)"
 	}
-	s := fmt.Sprintf("%s -> %s", a, b)
+	s := fmt.Sprintf("%s → %s", a, b)
 	writeLog(fmt.Sprintf("[upgradeFormat] return: \"%s\"", s))
 	return s
 }
@@ -124,7 +124,7 @@ func checkVer() { // 检查版本, 发更新日志
 	writeLog("[checkVer] current: " + currentVersion + ", old: " + oldVersion)
 
 	if currentVersion != oldVersion {
-		msgR := fmt.Sprintf("bot已更新: %s -> %s\n\n更新日志: %s", oldVersion, currentVersion, versionUpgradeLog)
+		msgR := fmt.Sprintf("bot已更新: %s → %s\n\n更新日志: %s", oldVersion, currentVersion, versionUpgradeLog)
 		writeLog("[checkVer] sendVersionUpgradeLogMsg: " + msgR)
 		if shouldPushLog {
 			sendMsg(msgR, versionSendStrategy)

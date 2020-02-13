@@ -8,8 +8,8 @@ const (
 	runModeDevOnLocalMachine int = 2 // 实机测试
 	runModeProduct           int = 3 // 生产环境
 
-	// globalRunMode = runModeDevInConsole
-	// globalRunMode = runModeDevOnLocalMachine
+	//globalRunMode = runModeDevInConsole
+	//globalRunMode = runModeDevOnLocalMachine
 	globalRunMode = runModeProduct
 )
 
@@ -34,12 +34,12 @@ const (
 	appid string = "com.acdzh.dxy" // 务必正确填写
 
 	// bot版本信息
-	currentVersion string = "v2.4.17.39" // 当前版本, 每次修改后会进行版本更新推送
+	currentVersion string = "v2.13.12.25" // 当前版本, 每次修改后会进行版本更新推送
 	// 版本更新日志, 仅会推送一次
 	versionFileName   string = "conf/dxy.cfg" // 存储版本号
 	logFilePath       string = "data/log/"    // log文件目录 (log会以日期命名
 	shouldPushLog     bool   = true           // 是否在更新之后更新版本推送
-	versionUpgradeLog string = `1. 全tm是bug...`
+	versionUpgradeLog string = `1. ...`
 )
 
 // how to send msg
@@ -70,7 +70,7 @@ var (
 
 // url
 const (
-	dxyURL     string = "https://3g.dxy.cn/newh5/view/pneumonia"                // 数据来源url
+	dxyURL     string = "https://ncov.dxy.cn/ncovh5/view/pneumonia"             // 数据来源url
 	baiduURL   string = "https://voice.baidu.com/act/newpneumonia/newpneumonia" // 地图来源uurl
 	tencentURL string = "https://news.qq.com/zt2020/page/feiyan.htm"
 	devURL     string = "http://127.0.0.1:5500/index.html" // 本地调试url
