@@ -6,12 +6,7 @@ import (
 )
 
 /*********************************数据类型 dxyDatas start****************************************/
-
 type dxyDatas map[string]interface{}
-
-func itos(i interface{}) string {
-	return fmt.Sprintf("%v", i)
-}
 
 func (d dxyDatas) toString() string {
 	s := ""

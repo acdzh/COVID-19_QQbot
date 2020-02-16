@@ -45,8 +45,20 @@ func sendMsg(msg string, strategy int) { // 发送消息
 	}
 }
 
+func peopleCountsToString(counts map[string]string) string {
+	s := ""
+	for _, field := range countsField {
+		s += fmt.Sprintf("%s / ", counts[field])
+	}
+	return s[:len(s)-2]
+}
+
 func timeStampToString(t int64) string { // 时间格式化
 	return time.Unix(t/1000, 0).Format("2006-01-02 15:04:05 (北京时间)")
+}
+
+func itos(i interface{}) string {
+	return fmt.Sprintf("%v", i)
 }
 
 func checkTimeInterval(t1, t2 float64) bool { // 检查时间间隔是否超过一小时

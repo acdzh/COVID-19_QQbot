@@ -20,13 +20,14 @@ const (
 
 	shouldSendAllAfterUpgradeInterval = 60 // 分钟, 当间隔时长大于此值时, 发送全部内容, 否则仅发送更新部分
 
-	// 自定义查询子区域 (未对所有地市进行匹配, 如果失败请自行修改正则
-	provinceName       string = "山东省"
-	provinceShortName  string = "山东"
-	cityName           string = "菏泽"
-	provinceName2      string = "上海市"
-	provinceShortName2 string = "上海"
-	cityName2          string = "嘉定区"
+)
+
+var (
+	// 自定义查询子区域, 不需要全称, 但必须可以与其他区分
+	// 日本, 美国 也是 province, 同样, 亚洲, 非洲 也是 province
+	queryChinaProvinceNames  = [...]string{"山东", "上海"}
+	queryGlobalProvinceNames = [...]string{"日本", "钻石公主"}
+	queryCityNames           = [...]string{"菏泽", "嘉定"}
 )
 
 // 基本信息
@@ -34,13 +35,14 @@ const (
 	appid string = "com.acdzh.dxy" // 务必正确填写
 
 	// bot版本信息
-	currentVersion string = "v2.13.12.25" // 当前版本, 每次修改后会进行版本更新推送
+	currentVersion string = "v2.16.20.28 beta" // 当前版本, 每次修改后会进行版本更新推送
 	// 版本更新日志, 仅会推送一次
-	versionFileName   string = "conf/dxy.cfg" // 存储版本号
-	logFilePath       string = "data/log/"    // log文件目录 (log会以日期命名
-	shouldPushLog     bool   = true           // 是否在更新之后更新版本推送
-	versionUpgradeLog string = `1. ...`
+	versionFileName string = "conf/dxy.cfg" // 存储版本号
+	logFilePath     string = "data/log/"    // log文件目录 (log会以日期命名
+	shouldPushLog   bool   = true           // 是否在更新之后更新版本推送
 )
+
+var versionUpgradeLog string = allVersionUpgradeLog[currentVersion]
 
 // how to send msg
 const (

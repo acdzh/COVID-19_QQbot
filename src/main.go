@@ -72,11 +72,7 @@ func onEnable() int32 {
 // 私聊发送任何消息都会回复当前情况
 func onPrivateMsg(subType, msgID int32, fromQQ int64, msg string, font int32) int32 {
 	writeLog(fmt.Sprintf("[onPrivateMsg] %d %s", fromQQ, msg))
-	if strings.Contains(msg, "url") {
-		cqp.SendPrivateMsg(fromQQ, urlList)
-		return 0
-	}
-	msgR := prase(fetch()).toString()
+	msgR := whatToReply(msg)
 	cqp.SendPrivateMsg(fromQQ, msgR)
 	return 0
 }
@@ -85,21 +81,63 @@ func onPrivateMsg(subType, msgID int32, fromQQ int64, msg string, font int32) in
 func onGroupMsg(subType, msgID int32, fromGroup, fromQQ int64, fromAnonymous, msg string, font int32) int32 {
 	if strings.Contains(msg, "[CQ:at,qq="+selfQQID+"]") {
 		writeLog(fmt.Sprintf("[onGroupMsg] %d %d %s", fromGroup, fromQQ, msg))
-		if strings.Contains(msg, "url") {
-			cqp.SendGroupMsg(fromGroup, urlList)
-			return 0
-		} else if strings.Contains(msg, "debug") {
-			s := ""
-			for k, v := range prase(fetch()) {
-				s += fmt.Sprintf("%v: %v\n", k, v)
-			}
-			cqp.SendGroupMsg(fromGroup, s)
-			return 0
-		}
-		msgR := prase(fetch()).toString()
+		msgR := whatToReply(strings.Replace(msg, "[CQ:at,qq="+selfQQID+"]", "", -1))
 		cqp.SendGroupMsg(fromGroup, msgR)
 	}
 	return 0
+}
+
+func whatToReply(msg string) string {
+	msg = strings.TrimLeft(msg, " ")
+	if len(msg) > 2 && msg[0] == 'q' && msg[1] == ' ' {
+		global, china, area, err := htmlGetAllProvinceAndCity(fetch())
+		if err != nil {
+			return fmt.Sprintf("%v", err)
+		}
+		replyMsg := ""
+		msg = strings.TrimLeft(msg[1:], " ")
+		for _, cityOrProvinceName := range strings.Split(msg, " ") {
+			if cityOrProvinceName != " " && cityOrProvinceName != "" {
+				d, name, err := getDatasOfProvinceOrCity(global, china, area, cityOrProvinceName)
+				if err != nil {
+					replyMsg += fmt.Sprintf("%v\n", err)
+				} else {
+					replyMsg += fmt.Sprintf("%s: %s\n", name, peopleCountsToString(d))
+				}
+			}
+		}
+		return strings.TrimRight(replyMsg, "\n")
+	}
+	if len(msg) > 3 && msg[0] == 'q' && msg[1] == 'a' && msg[2] == ' ' {
+		chinaAllDatas, err := htmlGetAreaStat(fetch())
+		if err != nil {
+			return fmt.Sprintf("%v", err)
+		}
+		replyMsg := ""
+		msg = strings.TrimLeft(msg[2:], " ")
+		for _, cityOrProvinceName := range strings.Split(msg, " ") {
+			if cityOrProvinceName != " " && cityOrProvinceName != "" {
+				t, err := getDataStrsOfCitesOfAProvince(chinaAllDatas, cityOrProvinceName)
+				if err != nil {
+					replyMsg += fmt.Sprintf("%v\n\n", err)
+				} else {
+					replyMsg += fmt.Sprintf("%s\n\n", t)
+				}
+			}
+		}
+		return strings.TrimRight(replyMsg, "\n")
+	}
+	if len(msg) > 3 && msg[0] == 'd' && strings.Contains(msg, "debug") {
+		s := ""
+		for k, v := range prase(fetch()) {
+			s += fmt.Sprintf("%v: %v\n", k, v)
+		}
+		return s
+	}
+	if len(msg) > 2 && msg[0] == 'u' && strings.Contains(msg, "url") {
+		return urlList
+	}
+	return prase(fetch()).toString()
 }
 
 func onExit() int32 {
