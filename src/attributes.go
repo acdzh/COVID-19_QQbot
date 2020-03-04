@@ -71,12 +71,12 @@ var (
 	}
 
 	forCheckAttributes = [...]string{
-		"currentConfirmedCount",
-		"confirmedCount",       // 2858
-		"suspectedCount",       // 5794
-		"seriousCount",         //
-		"deadCount",            // 82
-		"curedCount",           // 56
+		// "currentConfirmedCount",
+		"confirmedCount", // 2858
+		"suspectedCount", // 5794
+		"seriousCount",   //
+		"deadCount",      // 82
+		// "curedCount",           // 56
 		"queryChinaProvinces",  //
 		"queryGlobalProvinces", //
 		"queryCites",           //

@@ -136,7 +136,7 @@ func checkVer() { // 检查版本, 发更新日志
 	writeLog("[checkVer] current: " + currentVersion + ", old: " + oldVersion)
 
 	if currentVersion != oldVersion {
-		msgR := fmt.Sprintf("bot已更新: %s → %s\n\n更新日志: %s", oldVersion, currentVersion, versionUpgradeLog)
+		msgR := fmt.Sprintf("已更新: %s → %s\n\n更新日志: %s", oldVersion, currentVersion, versionUpgradeLog)
 		writeLog("[checkVer] sendVersionUpgradeLogMsg: " + msgR)
 		if shouldPushLog {
 			sendMsg(msgR, versionSendStrategy)

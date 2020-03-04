@@ -16,9 +16,11 @@ const (
 // 关于更新
 const (
 	//
-	refershInterval = 5 * 60 // 秒, 主动刷新间隔
+	refershInterval     = 5 * 60  // 秒, 主动刷新间隔
+	newsRefershInterval = 10 * 60 // 秒, 新闻刷新间隔
 
-	shouldSendAllAfterUpgradeInterval = 60 // 分钟, 当间隔时长大于此值时, 发送全部内容, 否则仅发送更新部分
+	shouldSendAllAfterUpgrade         = false // 当开启时, 下面这句才有效
+	shouldSendAllAfterUpgradeInterval = 60    // 分钟, 当间隔时长大于此值时, 发送全部内容, 否则仅发送更新部分
 
 )
 
@@ -26,7 +28,7 @@ var (
 	// 自定义查询子区域, 不需要全称, 但必须可以与其他区分
 	// 日本, 美国 也是 province, 同样, 亚洲, 非洲 也是 province
 	queryChinaProvinceNames  = [...]string{"山东", "上海"}
-	queryGlobalProvinceNames = [...]string{"日本", "钻石公主"}
+	queryGlobalProvinceNames = [...]string{"韩国", "日本", "伊朗", "意大利", "法国"}
 	queryCityNames           = [...]string{"菏泽", "嘉定"}
 )
 
@@ -35,7 +37,7 @@ const (
 	appid string = "com.acdzh.dxy" // 务必正确填写
 
 	// bot版本信息
-	currentVersion string = "v2.16.20.28 beta" // 当前版本, 每次修改后会进行版本更新推送
+	currentVersion string = "v3.4.14.27 beta" // 当前版本, 每次修改后会进行版本更新推送
 	// 版本更新日志, 仅会推送一次
 	versionFileName string = "conf/dxy.cfg" // 存储版本号
 	logFilePath     string = "data/log/"    // log文件目录 (log会以日期命名
@@ -59,6 +61,7 @@ const (
 	failedDataSendStrategy       int = 10*sendToUserAndDev + sendToDevOnly    // 出现错误: 仅私聊发送管理员, 并发送给所有群
 	versionSendStrategy          int = 10*sendToUserAndDev + sendToDevOnly    // 版本日志: 发送给所有群, 但私聊仅发送给管理员
 	upgradeSendStrategy          int = 10*sendToUserAndDev + sendToUserAndDev // 数据更新: 发送给所有群和用户
+	newsUpgradeSendStrategy      int = 10*sendToUserAndDev + sendToUserAndDev // 新闻更新: 发送给所有群和用户
 )
 
 // qqGroup & qqID
@@ -90,3 +93,4 @@ const (
 // 全局变量
 var willPraseSuccess bool = true            // 标识是否会解析失败
 var lastSendAllAfterUpgradeTime float64 = 0 // 上一次更新推送全部项是什么时候(unix时间戳 / ms)
+var lastNewsTimeStamp int64 = 0             // 上一条news的日期 (发布更新之前不要忘了手动改一下

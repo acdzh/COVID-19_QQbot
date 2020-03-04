@@ -8,27 +8,6 @@ import (
 	"main/cqp"
 )
 
-func consoleTest() {
-	html := fetch()
-	d := prase(html)
-	lastSendAllAfterUpgradeTime = d["modifyTime"].(float64)
-	writeLog(fmt.Sprintf("%v\n", lastSendAllAfterUpgradeTime))
-	dd := prase(html)
-	dd["deadCount"] = "9843 (较昨日 +59)"
-	dd["modifyTime"] = 1580722478000.0
-	for k, v := range d {
-		writeLog(fmt.Sprintf("%v, %v", k, v))
-	}
-
-	writeLog("")
-	writeLog(d.toString())
-	writeLog("")
-	writeLog(d.toStringBeforeUpgrade(dd))
-	d.upgrade(dd)
-	writeLog("")
-	writeLog(d.toString())
-}
-
 func main() {
 	if globalRunMode == runModeDevInConsole {
 		consoleTest()
@@ -66,6 +45,21 @@ func onEnable() int32 {
 			time.Sleep(refershInterval * time.Second)
 		}
 	}(d)
+	go func() {
+		for {
+			writeLog(("[onEnable] start fetch news"))
+			isUpdated, message, err := parseNews(fetchNews())
+			if err != nil {
+				writeLog("[fetch news error] " + message)
+				continue
+			}
+			if !isUpdated {
+				continue
+			}
+			sendMsg(message, newsUpgradeSendStrategy)
+			time.Sleep(newsRefershInterval * time.Second)
+		}
+	}()
 	return 0
 }
 

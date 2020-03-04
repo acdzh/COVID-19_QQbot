@@ -22,7 +22,7 @@ func (d dxyDatas) toString() string {
 }
 
 func (d dxyDatas) toStringBeforeUpgrade(new dxyDatas) string {
-	shouldShowAll := checkTimeInterval(new["modifyTime"].(float64), lastSendAllAfterUpgradeTime)
+	shouldShowAll := checkTimeInterval(new["modifyTime"].(float64), lastSendAllAfterUpgradeTime) && shouldSendAllAfterUpgrade
 	writeLog(fmt.Sprintf("[toStringBeforeUpgrade] shouldShowAll: %v", shouldShowAll))
 	s := ""
 	for _, arr := range neededAttributes {
