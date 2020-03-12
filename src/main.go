@@ -30,6 +30,7 @@ func onEnable() int32 {
 	checkVer()
 	d := prase(fetch())
 	lastSendAllAfterUpgradeTime = d["modifyTime"].(float64)
+	// lastNewsTimeStamp = time.Now().Unix()
 	writeLog(fmt.Sprintf("[onEnable] 初始化, lastSendAllAfterUpgradeTimeStr: %v", lastSendAllAfterUpgradeTime))
 	go func(d dxyDatas) {
 		for {
@@ -48,15 +49,19 @@ func onEnable() int32 {
 	go func() {
 		for {
 			writeLog(("[onEnable] start fetch news"))
-			isUpdated, message, err := parseNews(fetchNews())
+			isUpdated, messages, err := parseNews(fetchNews())
 			if err != nil {
-				writeLog("[fetch news error] " + message)
+				writeLog("[fetch news error]")
 				continue
 			}
 			if !isUpdated {
+				writeLog(("[onEnable] news ! up"))
 				continue
 			}
-			sendMsg(message, newsUpgradeSendStrategy)
+			for _, message := range messages {
+				sendMsg(message, newsUpgradeSendStrategy)
+				time.Sleep(2 * time.Second)
+			}
 			time.Sleep(newsRefershInterval * time.Second)
 		}
 	}()

@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 func consoleTest() {
 	// html := fetch()
 	// d := prase(html)
@@ -19,6 +21,10 @@ func consoleTest() {
 	// d.upgrade(dd)
 	// writeLog("")
 	// writeLog(d.toString())
-
-	// fmt.Println(parseNews(fetchNews()))
+	s := fetchNews()
+	_, tt, _ := parseNews(s)
+	fmt.Println(tt)
+	for _, i := range tt {
+		fmt.Println(i)
+	}
 }

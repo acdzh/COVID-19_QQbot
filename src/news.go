@@ -11,7 +11,7 @@ import (
 
 func fetchNews() string {
 	writeLog("[fetchNews] start")
-	req, _ := http.NewRequest("GET", "https://ncov-rss.qgis.me/api/messages?limit=1", strings.NewReader(""))
+	req, _ := http.NewRequest("GET", "https://ncov-rss.qgis.me/api/messages?limit=10", strings.NewReader(""))
 	myHeaders := map[string]string{
 		"Accept":     "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
 		"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/72.0"}
@@ -42,31 +42,43 @@ func timeParseForNews(timeStr string) (timestamp int64, timeStrChina string) {
 
 }
 
-func parseNews(html string) (isUpdated bool, message string, err error) {
+func parseNews(html string) (isUpdated bool, messages []string, err error) {
 	writeLog("[parseNews] begin")
 	var j interface{}
 	err = json.Unmarshal([]byte(html), &j)
 	if err != nil {
-		return false, "parse failed.", fmt.Errorf("parse failed.")
+		return false, nil, fmt.Errorf("parse failed.")
 	}
-	lastNews := j.(map[string]interface{})["messages"].([]interface{})[0].(map[string]interface{})
-	timeStampCST, timeStr := timeParseForNews(lastNews["date"].(string))
-	if timeStampCST <= lastNewsTimeStamp {
-		writeLog("[parseNews] fail done")
-		return false, "", nil
-	}
-	lastNewsTimeStamp = timeStampCST
-	message = lastNews["message"].(string) + "\n"
-	for _, entity := range (lastNews["entities"]).([]interface{}) {
-		entityJSON := entity.(map[string]interface{})
-		if entityJSON["_"].(string) == "MessageEntityTextUrl" {
-			offset := (int)(entityJSON["offset"].(float64))
-			length := (int)(entityJSON["length"].(float64))
-			url := entityJSON["url"].(string)
-			message += fmt.Sprintf("\n%s: %s", string([]rune(message)[offset:offset+length]), url)
+	newss := j.(map[string]interface{})["messages"].([]interface{})
+
+	for i := len(newss) - 1; i >= 0; i-- {
+		news := newss[i].(map[string]interface{})
+		if news["_"].(string) != "Message" || news["message"] == nil {
+			continue
 		}
+
+		timeStampCST, timeStr := timeParseForNews(news["date"].(string))
+		if timeStampCST <= lastNewsTimeStamp {
+			continue
+		}
+		lastNewsTimeStamp = timeStampCST
+		message := news["message"].(string)
+		if len(message) < 5 {
+			continue
+		}
+		for _, entity := range (news["entities"]).([]interface{}) {
+			entityJSON := entity.(map[string]interface{})
+			if entityJSON["_"].(string) == "MessageEntityTextUrl" {
+				offset := (int)(entityJSON["offset"].(float64))
+				length := (int)(entityJSON["length"].(float64))
+				url := entityJSON["url"].(string)
+				message += fmt.Sprintf("\n%s: %s", string([]rune(message)[offset:offset+length]), url)
+			}
+		}
+		message += fmt.Sprintf("\n\n%s", timeStr)
+		messages = append(messages, message)
 	}
-	message += fmt.Sprintf("\n\n更新时间: %s", timeStr)
+
 	writeLog("[parseNews] success done")
-	return true, message, nil
+	return len(messages) != 0, messages, nil
 }

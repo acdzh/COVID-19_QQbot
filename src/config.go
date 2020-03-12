@@ -16,8 +16,8 @@ const (
 // 关于更新
 const (
 	//
-	refershInterval     = 5 * 60  // 秒, 主动刷新间隔
-	newsRefershInterval = 10 * 60 // 秒, 新闻刷新间隔
+	refershInterval     = 5 * 60 // 秒, 主动刷新间隔
+	newsRefershInterval = 8 * 60 // 秒, 新闻刷新间隔
 
 	shouldSendAllAfterUpgrade         = false // 当开启时, 下面这句才有效
 	shouldSendAllAfterUpgradeInterval = 60    // 分钟, 当间隔时长大于此值时, 发送全部内容, 否则仅发送更新部分
@@ -37,7 +37,7 @@ const (
 	appid string = "com.acdzh.dxy" // 务必正确填写
 
 	// bot版本信息
-	currentVersion string = "v3.4.14.27 beta" // 当前版本, 每次修改后会进行版本更新推送
+	currentVersion string = "v3.10.12.35" // 当前版本, 每次修改后会进行版本更新推送
 	// 版本更新日志, 仅会推送一次
 	versionFileName string = "conf/dxy.cfg" // 存储版本号
 	logFilePath     string = "data/log/"    // log文件目录 (log会以日期命名
@@ -93,4 +93,4 @@ const (
 // 全局变量
 var willPraseSuccess bool = true            // 标识是否会解析失败
 var lastSendAllAfterUpgradeTime float64 = 0 // 上一次更新推送全部项是什么时候(unix时间戳 / ms)
-var lastNewsTimeStamp int64 = 0             // 上一条news的日期 (发布更新之前不要忘了手动改一下
+var lastNewsTimeStamp int64 = 1583806529    //1583336893    // 上一条news的日期 (发布更新之前不要忘了手动改一下
