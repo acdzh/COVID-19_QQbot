@@ -24,33 +24,31 @@ func extractDataFromHTML(html, field string) (interface{}, error) {
 
 // 国外情况列表
 func htmlGetListByCountryTypeService2(html string) ([]interface{}, error) {
-	j, err := extractDataFromHTML(html, "getListByCountryTypeService2")
-	return j.([]interface{}), err
-}
-
-// 国内省份情况列表
-func htmlGetListByCountryTypeService1(html string) ([]interface{}, error) {
-	j, err := extractDataFromHTML(html, "getListByCountryTypeService1")
+	j, err := extractDataFromHTML(html, "getListByCountryTypeService2true")
+	if j == nil {
+		fuckedUp("获取国外列表 error")
+		return nil, fmt.Errorf("获取国外列表 error")
+	}
 	return j.([]interface{}), err
 }
 
 // 国内全部情况列表
 func htmlGetAreaStat(html string) ([]interface{}, error) {
 	j, err := extractDataFromHTML(html, "getAreaStat")
+	if j == nil {
+		fuckedUp("获取国内列表 error")
+		return nil, fmt.Errorf("获取国内列表 error")
+	}
 	return j.([]interface{}), err
 }
 
-func htmlGetAllProvinceAndCity(html string) ([]interface{}, []interface{}, []interface{}, error) {
+func htmlGetAllProvinceAndCity(html string) ([]interface{}, []interface{}, error) {
 	j1, err := htmlGetListByCountryTypeService2(html)
 	if err != nil {
-		return nil, nil, nil, err
-	}
-	j2, err := htmlGetListByCountryTypeService1(html)
-	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	j3, err := htmlGetAreaStat(html)
-	return j1, j2, j3, err
+	return j1, j3, err
 }
 
 // 国内总体情况字典
@@ -80,7 +78,7 @@ func getDatasOfProvinceFromOneList(datas []interface{}, queryProvinceName string
 	return nil, "%s", fmt.Errorf("not find %s", queryProvinceName)
 }
 
-func getDatasOfProvince(globalDatas, chinaDatas []interface{}, queryProvinceName string) (map[string]string, string, error) {
+func getDatasOfGlobalProvince(globalDatas, chinaDatas []interface{}, queryProvinceName string) (map[string]string, string, error) {
 	counts, name, err := getDatasOfProvinceFromOneList(globalDatas, queryProvinceName)
 	if err != nil {
 		counts, name, err = getDatasOfProvinceFromOneList(chinaDatas, queryProvinceName)
@@ -131,10 +129,10 @@ func getDataStrsOfCitesOfAProvince(datas []interface{}, queryProvinceName string
 	return "%s", fmt.Errorf("not find %s", queryProvinceName)
 }
 
-func getDatasOfProvinceOrCity(globalDatas, chinaDatas, areaDatas []interface{}, queryName string) (map[string]string, string, error) {
+func getDatasOfProvinceOrCity(globalDatas, areaDatas []interface{}, queryName string) (map[string]string, string, error) {
 	counts, name, err := getDatasOfProvinceFromOneList(globalDatas, queryName)
 	if err != nil {
-		counts, name, err = getDatasOfProvinceFromOneList(chinaDatas, queryName)
+		counts, name, err = getDatasOfProvinceFromOneList(areaDatas, queryName)
 	}
 	if err != nil {
 		counts, name, err = getDatasOfCity(areaDatas, queryName)
@@ -145,7 +143,7 @@ func getDatasOfProvinceOrCity(globalDatas, chinaDatas, areaDatas []interface{}, 
 func prase(html string) dxyDatas {
 	sprintf := fmt.Sprintf
 	praseSucccess := true
-	errorMsg := "网页已改版, 解析失败, 暂停更新. 管理员快来修bug."
+	errorMsg := "error."
 
 	d, err := htmlGetStatisticsService(html)
 	if err != nil {
@@ -153,23 +151,6 @@ func prase(html string) dxyDatas {
 		errorMsg += sprintf("\nprase json failed: %v.", err)
 	}
 	d.dataFmt()
-
-	allChinaProvinceDatas, err := htmlGetListByCountryTypeService1(html)
-	if err != nil {
-		praseSucccess = false
-		errorMsg += sprintf("\nquery china province failed: %v.", err)
-	} else {
-		queryChinaprovinceDatasStr := ""
-		for _, queryProvinceName := range queryChinaProvinceNames {
-			d, name, err2 := getDatasOfProvinceFromOneList(allChinaProvinceDatas, queryProvinceName)
-			if err2 != nil {
-				praseSucccess = false
-				errorMsg += sprintf("\n%v", err2)
-			}
-			queryChinaprovinceDatasStr += sprintf("%s: %s\n", name, peopleCountsToString(d))
-		}
-		d["queryChinaProvinces"] = strings.TrimRight(queryChinaprovinceDatasStr, "\n")
-	}
 
 	allGlobalProvinceDatas, err := htmlGetListByCountryTypeService2(html)
 	if err != nil {
@@ -203,14 +184,21 @@ func prase(html string) dxyDatas {
 			queryCityDatasStr += sprintf("%s: %s\n", name, peopleCountsToString(d))
 		}
 		d["queryCites"] = strings.TrimRight(queryCityDatasStr, "\n")
+
+		queryChinaprovinceDatasStr := ""
+		for _, queryProvinceName := range queryChinaProvinceNames {
+			d, name, err2 := getDatasOfProvinceFromOneList(allCityDatas, queryProvinceName)
+			if err2 != nil {
+				praseSucccess = false
+				errorMsg += sprintf("\n%v", err2)
+			}
+			queryChinaprovinceDatasStr += sprintf("%s: %s\n", name, peopleCountsToString(d))
+		}
+		d["queryChinaProvinces"] = strings.TrimRight(queryChinaprovinceDatasStr, "\n")
 	}
 
 	if praseSucccess == false {
-		if willPraseSuccess {
-			writeLog("[prase] error " + errorMsg)
-			sendMsg(errorMsg, failedDataSendStrategy)
-		}
-		willPraseSuccess = false
+		fuckedUp(errorMsg)
 	}
 
 	return d

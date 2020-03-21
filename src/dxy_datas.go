@@ -64,14 +64,24 @@ func (d dxyDatas) dataFmt() { // 获取到初始数据后, 再进行一些加工
 	d["tencentUrl"] = tencentURL
 	d["version"] = currentVersion
 
+	for k, v := range d["foreignStatistics"].(map[string]interface{}) {
+		d["foreign"+k] = v.(float64)
+	}
+
 	for _, t := range [...]string{"currentConfirmed", "confirmed", "suspected", "serious", "dead", "cured"} {
-		if d[t+"Incr"] == nil {
-			d[t+"Count"] = fmt.Sprintf("%v (较昨日 +nil)", d[t+"Count"])
-		} else {
-			if strings.Contains(itos(d[t+"Incr"]), "-") {
-				d[t+"Count"] = fmt.Sprintf("%v (较昨日 %v)", d[t+"Count"], d[t+"Incr"])
+		for _, tt := range [...]string{"", "foreign"} {
+			t = tt + t
+			if d[t+"Count"] == nil {
+				continue
+			}
+			if d[t+"Incr"] == nil {
+				d[t+"Count"] = fmt.Sprintf("%v +nil", d[t+"Count"])
 			} else {
-				d[t+"Count"] = fmt.Sprintf("%v (较昨日 +%v)", d[t+"Count"], d[t+"Incr"])
+				if strings.Contains(itos(d[t+"Incr"]), "-") {
+					d[t+"Count"] = fmt.Sprintf("%v %v", d[t+"Count"], d[t+"Incr"])
+				} else {
+					d[t+"Count"] = fmt.Sprintf("%v +%v", d[t+"Count"], d[t+"Incr"])
+				}
 			}
 		}
 	}

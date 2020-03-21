@@ -30,7 +30,9 @@ func onEnable() int32 {
 	checkVer()
 	d := prase(fetch())
 	lastSendAllAfterUpgradeTime = d["modifyTime"].(float64)
-	// lastNewsTimeStamp = time.Now().Unix()
+	if lastNewsTimeStamp == 0 {
+		lastNewsTimeStamp = time.Now().Unix()
+	}
 	writeLog(fmt.Sprintf("[onEnable] 初始化, lastSendAllAfterUpgradeTimeStr: %v", lastSendAllAfterUpgradeTime))
 	go func(d dxyDatas) {
 		for {
@@ -89,7 +91,7 @@ func onGroupMsg(subType, msgID int32, fromGroup, fromQQ int64, fromAnonymous, ms
 func whatToReply(msg string) string {
 	msg = strings.TrimLeft(msg, " ")
 	if len(msg) > 2 && msg[0] == 'q' && msg[1] == ' ' {
-		global, china, area, err := htmlGetAllProvinceAndCity(fetch())
+		global, area, err := htmlGetAllProvinceAndCity(fetch())
 		if err != nil {
 			return fmt.Sprintf("%v", err)
 		}
@@ -97,7 +99,7 @@ func whatToReply(msg string) string {
 		msg = strings.TrimLeft(msg[1:], " ")
 		for _, cityOrProvinceName := range strings.Split(msg, " ") {
 			if cityOrProvinceName != " " && cityOrProvinceName != "" {
-				d, name, err := getDatasOfProvinceOrCity(global, china, area, cityOrProvinceName)
+				d, name, err := getDatasOfProvinceOrCity(global, area, cityOrProvinceName)
 				if err != nil {
 					replyMsg += fmt.Sprintf("%v\n", err)
 				} else {

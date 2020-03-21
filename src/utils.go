@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 /*********************************支持函数 start****************************************/
 func sendMsg(msg string, strategy int) { // 发送消息
 	if globalRunMode == runModeDevInConsole {
+		fmt.Println("[MSG] " + msg)
 		return
 	}
 	if globalRunMode == runModeDevOnLocalMachine {
@@ -42,6 +44,28 @@ func sendMsg(msg string, strategy int) { // 发送消息
 		for _, qqID := range devQQIds {
 			cqp.SendPrivateMsg(qqID, msg)
 		}
+	}
+}
+
+func fuckedUpWithStrategy(msg string, sendStrategy int) {
+	if willPraseSuccess {
+		pc, file, line, _ := runtime.Caller(1)
+		funcName := runtime.FuncForPC(pc).Name()
+		msg += fmt.Sprintf("\n%v : line.%v : %v", file, line, funcName)
+		sendMsg(msg, sendStrategy)
+		writeLog("[error] " + msg)
+		willPraseSuccess = false
+	}
+}
+
+func fuckedUp(msg string) {
+	if willPraseSuccess {
+		pc, file, line, _ := runtime.Caller(1)
+		funcName := runtime.FuncForPC(pc).Name()
+		msg += fmt.Sprintf("\n%v : line.%v : %v", file, line, funcName)
+		sendMsg(msg, failedDataSendStrategy)
+		writeLog("[error] " + msg)
+		willPraseSuccess = false
 	}
 }
 
@@ -136,7 +160,10 @@ func checkVer() { // 检查版本, 发更新日志
 	writeLog("[checkVer] current: " + currentVersion + ", old: " + oldVersion)
 
 	if currentVersion != oldVersion {
-		msgR := fmt.Sprintf("已更新: %s → %s\n\n更新日志: %s", oldVersion, currentVersion, versionUpgradeLog)
+		msgR := fmt.Sprintf("已更新: %s → %s", oldVersion, currentVersion)
+		if versionUpgradeLog != "" {
+			msgR += fmt.Sprintf("\n\n更新日志: %s", versionUpgradeLog)
+		}
 		writeLog("[checkVer] sendVersionUpgradeLogMsg: " + msgR)
 		if shouldPushLog {
 			sendMsg(msgR, versionSendStrategy)
