@@ -9,8 +9,8 @@ const (
 	runModeProduct           int = 3 // 生产环境
 
 	//globalRunMode = runModeDevOnLocalMachine
-	globalRunMode = runModeProduct
-	//globalRunMode = runModeDevInConsole
+	//globalRunMode = runModeProduct
+	globalRunMode = runModeDevInConsole
 )
 
 // 关于更新
@@ -27,8 +27,8 @@ const (
 var (
 	// 自定义查询子区域, 不需要全称, 但必须可以与其他区分
 	// 日本, 美国 也是 province, 同样, 亚洲, 非洲 也是 province
-	queryChinaProvinceNames  = [...]string{"山东", "上海"}
-	queryGlobalProvinceNames = [...]string{"日本", "伊朗", "意大利"}
+	queryChinaProvinceNames  = [...]string{"上海"}
+	queryGlobalProvinceNames = [...]string{"美国", "意大利", "西班牙", "德国", "法国", "英国", "伊朗"}
 	queryCityNames           = [...]string{}
 )
 
@@ -60,17 +60,17 @@ const (
 	firstDataSendStrategy        int = 10*sendToDevOnly + sendToNobody        // 上线后拉取的初始数据: 仅发送到调试qq群
 	failedDataSendStrategy       int = 10*sendToNobody + sendToDevOnly        // 出现错误: 仅私聊发送管理员, 并发送给所有群
 	versionSendStrategy          int = 10*sendToUserAndDev + sendToDevOnly    // 版本日志: 发送给所有群, 但私聊仅发送给管理员
-	upgradeSendStrategy          int = 10*sendToUserAndDev + sendToUserAndDev // 数据更新: 发送给所有群和用户
+	upgradeSendStrategy          int = 10*sendToNobody + sendToUserAndDev     // 数据更新: 仅发给管理员用户
 	newsUpgradeSendStrategy      int = 10*sendToUserAndDev + sendToUserAndDev // 新闻更新: 发送给所有群和用户
 )
 
 // qqGroup & qqID
 var (
-	selfQQID       string = "1472745738"                     // bot自己的qq号
-	userQQGroupIDs        = [...]int64{854378285, 361684286} // 普通用户qq群数组
-	devQQGroupIDs         = [...]int64{584405782}            // 开发者调试用qq群数组
-	userQQIds             = [...]int64{}                     // 普通用户订阅qq号数组
-	devQQIds              = []int64{1069436872}              // 开发者qq号数组
+	selfQQID       string = "1472745738"          // bot自己的qq号
+	userQQGroupIDs        = [...]int64{}          // 普通用户qq群数组
+	devQQGroupIDs         = [...]int64{584405782} // 开发者调试用qq群数组
+	userQQIds             = [...]int64{}          // 普通用户订阅qq号数组
+	devQQIds              = []int64{1069436872}   // 开发者qq号数组
 )
 
 // url
@@ -93,4 +93,4 @@ const (
 // 全局变量
 var willPraseSuccess bool = true            // 标识是否会解析失败
 var lastSendAllAfterUpgradeTime float64 = 0 // 上一次更新推送全部项是什么时候(unix时间戳 / ms)
-var lastNewsTimeStamp int64 = 1584339618    //1583336893    // 上一条news的日期 (发布更新之前不要忘了手动改一下
+var lastNewsTimeStamp int64 = 0             //1584339618    //1583336893    // 上一条news的日期 (发布更新之前不要忘了手动改一下
